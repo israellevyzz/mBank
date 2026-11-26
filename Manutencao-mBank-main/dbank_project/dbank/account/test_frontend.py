@@ -149,16 +149,36 @@ class FrontendPagesAndSupportApiTests(TestCase):
         self.assertEqual(dep.status_code, 201)
         self.assertEqual(dep.data['account']['balance'], '8600.00')
 
-        # Withdraw
-        wit = self.api.post(f'/bank/api/accounts/{self.acc1.pk}/saque/', {'amount': '200.00'}, format='json')
+        # Withdraw rejects wrong password and succeeds with valid password
+        bad_wit = self.api.post(
+            f'/bank/api/accounts/{self.acc1.pk}/saque/',
+            {'amount': '200.00', 'password': 'wrong-password'},
+            format='json',
+        )
+        self.assertEqual(bad_wit.status_code, 400)
+        self.assertEqual(bad_wit.data['code'], 'INVALID_PASSWORD')
+
+        wit = self.api.post(
+            f'/bank/api/accounts/{self.acc1.pk}/saque/',
+            {'amount': '200.00', 'password': 'StrongPassword!2026'},
+            format='json',
+        )
         self.assertEqual(wit.status_code, 201)
         self.assertEqual(wit.data['account']['balance'], '8400.00')
         self.assertTrue(wit.data['withdrawal_code'])
 
-        # Transfer to another client by IBAN
+        # Transfer rejects wrong password and succeeds with valid password
+        bad_trf = self.api.post(
+            f'/bank/api/accounts/{self.acc1.pk}/transferencia/',
+            {'dest_iban': 'BR55554444', 'amount': '400.00', 'password': 'wrong-password'},
+            format='json',
+        )
+        self.assertEqual(bad_trf.status_code, 400)
+        self.assertEqual(bad_trf.data['code'], 'INVALID_PASSWORD')
+
         trf = self.api.post(
             f'/bank/api/accounts/{self.acc1.pk}/transferencia/',
-            {'dest_iban': 'BR55554444', 'amount': '400.00'},
+            {'dest_iban': 'BR55554444', 'amount': '400.00', 'password': 'StrongPassword!2026'},
             format='json',
         )
         self.assertEqual(trf.status_code, 201)
@@ -169,7 +189,11 @@ class FrontendPagesAndSupportApiTests(TestCase):
 
         # Isolation: cannot deposit/withdraw/close foreign account
         self.assertEqual(
-            self.api.post(f'/bank/api/accounts/{self.other_acc.pk}/saque/', {'amount': '10.00'}, format='json').status_code,
+            self.api.post(
+                f'/bank/api/accounts/{self.other_acc.pk}/saque/',
+                {'amount': '10.00', 'password': 'StrongPassword!2026'},
+                format='json',
+            ).status_code,
             404,
         )
         self.assertEqual(

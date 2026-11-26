@@ -128,14 +128,18 @@
       </button>
     </section>
 
-    <!-- Modal de Confirmação -->
+    <!-- Modal de Confirmação com Senha -->
     <div class="mb-modal-backdrop" id="modal-transfer-confirm">
       <div class="mb-modal">
         <div class="mb-modal-header">
-          <h3 class="mb-modal-title">Confirmar transferência</h3>
+          <h3 class="mb-modal-title">Confirmar transferência com senha</h3>
           <button type="button" class="mb-modal-close" data-close-modal="modal-transfer-confirm">&times;</button>
         </div>
         <div style="background:var(--bg-elevated);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;font-size:14px;">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--text-secondary);">Modalidade</span>
+            <strong id="confirm-mode">Pix Instantâneo</strong>
+          </div>
           <div style="display:flex;justify-content:space-between;">
             <span style="color:var(--text-secondary);">Origem</span>
             <strong id="confirm-src-iban"></strong>
@@ -149,10 +153,35 @@
             <strong id="confirm-amount" style="color:var(--positive-emerald);font-size:16px;"></strong>
           </div>
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:10px;">
-          <button type="button" class="mb-btn-secondary" data-close-modal="modal-transfer-confirm">Voltar</button>
-          <button type="button" class="mb-btn-primary" id="transfer-execute-btn">Confirmar envio</button>
-        </div>
+
+        <div id="transfer-confirm-error" class="mb-auth-error" style="display:none;margin:0;"></div>
+
+        <form id="form-transfer-confirm" style="display:flex;flex-direction:column;gap:14px;">
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="transfer-confirm-password">Senha da sua conta mBank *</label>
+            <div class="mb-auth-input-wrap compact">
+              <img src="{% static 'mbank/assets/9f5b9.svg' %}" alt="" width="13" height="16">
+              <input
+                type="password"
+                id="transfer-confirm-password"
+                placeholder="Digite sua senha para autorizar"
+                autocomplete="current-password"
+                required
+              >
+              <button type="button" class="mb-eye-btn" data-toggle-password="transfer-confirm-password" aria-label="Mostrar senha">
+                <img src="{% static 'mbank/assets/d5972.svg' %}" alt="" width="16" height="11">
+              </button>
+            </div>
+            <span style="font-size:12px;color:var(--text-muted);">
+              Confirmação obrigatória de segurança para concluir a transação.
+            </span>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:10px;">
+            <button type="button" class="mb-btn-secondary" data-close-modal="modal-transfer-confirm">Voltar</button>
+            <button type="submit" class="mb-btn-primary" id="transfer-execute-btn">Autorizar envio</button>
+          </div>
+        </form>
       </div>
     </div>
   {% else %}
@@ -226,6 +255,16 @@
     }
 
     let pendingKey = null;
+    let activeModeLabel = 'Pix Instantâneo';
+    const confirmForm = document.getElementById('form-transfer-confirm');
+    const confirmPass = document.getElementById('transfer-confirm-password');
+    const confirmErr = document.getElementById('transfer-confirm-error');
+
+    document.querySelectorAll('[data-tmode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activeModeLabel = btn.getAttribute('data-tmode') === 'ted' ? 'TED / Entre Contas' : 'Pix Instantâneo';
+      });
+    });
 
     continueBtn.addEventListener('click', function () {
       const dest = destInput.value.trim();
@@ -240,26 +279,60 @@
       }
       const info = currentAccountInfo();
       pendingKey = window.mBank.uuid4();
+      document.getElementById('confirm-mode').textContent = activeModeLabel;
       document.getElementById('confirm-src-iban').textContent = info.iban;
       document.getElementById('confirm-dest-iban').textContent = dest;
       document.getElementById('confirm-amount').textContent = 'R$ ' + window.mBank.formatBRL(amount);
+      confirmErr.style.display = 'none';
+      confirmErr.textContent = '';
+      confirmPass.value = '';
       window.mBank.openModal('modal-transfer-confirm');
+      setTimeout(function () { confirmPass.focus(); }, 60);
     });
 
-    executeBtn.addEventListener('click', async function () {
+    confirmForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
       const info = currentAccountInfo();
       const amount = window.mBank.parseBRL(amountInput.value);
       const dest = destInput.value.trim();
+      const password = confirmPass.value;
+      if (!password) {
+        confirmErr.textContent = 'Digite a senha da sua conta para autorizar.';
+        confirmErr.style.display = 'block';
+        return;
+      }
+      confirmErr.style.display = 'none';
       executeBtn.disabled = true;
       try {
-        const res = await window.mBank.apiFetch('/bank/api/accounts/' + info.id + '/transferencia/', {
+        const response = await fetch('/bank/api/accounts/' + info.id + '/transferencia/', {
           method: 'POST',
-          body: {
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.mBank.getCookie('csrftoken')
+          },
+          body: JSON.stringify({
             dest_iban: dest,
             amount: amount.toFixed(2),
+            password: password,
             request_key: pendingKey || window.mBank.uuid4()
-          }
+          })
         });
+        const res = await response.json().catch(function () { return {}; });
+        if (!response.ok) {
+          let msg = res.detail || 'Não foi possível concluir a transferência.';
+          if (res.code === 'PASSWORD_BLOCKED' && res.retry_at) {
+            const dt = new Date(res.retry_at);
+            if (!Number.isNaN(dt.getTime())) {
+              msg += ' Tente novamente após ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '.';
+            }
+          }
+          confirmErr.textContent = msg;
+          confirmErr.style.display = 'block';
+          confirmPass.value = '';
+          confirmPass.focus();
+          return;
+        }
         window.mBank.closeModal('modal-transfer-confirm');
         availDisplay.textContent = 'R$ ' + window.mBank.formatBRL(res.account.available_balance);
         if (accountSel.tagName === 'SELECT') {
@@ -270,7 +343,8 @@
         amountInput.value = '0,00';
         window.mBank.toast('Transferência de R$ ' + window.mBank.formatBRL(amount) + ' enviada para ' + res.dest_owner + ' (' + res.dest_iban + ')!');
       } catch (err) {
-        window.mBank.toast(err.message, 'error');
+        confirmErr.textContent = err.message || 'Erro ao comunicar com o servidor.';
+        confirmErr.style.display = 'block';
       } finally {
         executeBtn.disabled = false;
       }

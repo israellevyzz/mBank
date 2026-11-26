@@ -90,6 +90,59 @@
       </button>
     </section>
 
+    <!-- Modal de Confirmação com Senha -->
+    <div class="mb-modal-backdrop" id="modal-withdraw-confirm">
+      <div class="mb-modal">
+        <div class="mb-modal-header">
+          <h3 class="mb-modal-title">Confirmar saque com senha</h3>
+          <button type="button" class="mb-modal-close" data-close-modal="modal-withdraw-confirm">&times;</button>
+        </div>
+        <div style="background:var(--bg-elevated);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;font-size:14px;">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--text-secondary);">Conta de origem</span>
+            <strong id="wc-iban"></strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--text-secondary);">Método</span>
+            <strong id="wc-method">Código no Caixa</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--text-secondary);">Valor do saque</span>
+            <strong id="wc-amount" style="color:var(--positive-emerald);font-size:16px;"></strong>
+          </div>
+        </div>
+
+        <div id="withdraw-confirm-error" class="mb-auth-error" style="display:none;margin:0;"></div>
+
+        <form id="form-withdraw-confirm" style="display:flex;flex-direction:column;gap:14px;">
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="withdraw-confirm-password">Senha da sua conta mBank *</label>
+            <div class="mb-auth-input-wrap compact">
+              <img src="{% static 'mbank/assets/9f5b9.svg' %}" alt="" width="13" height="16">
+              <input
+                type="password"
+                id="withdraw-confirm-password"
+                placeholder="Digite sua senha para autorizar"
+                autocomplete="current-password"
+                required
+              >
+              <button type="button" class="mb-eye-btn" data-toggle-password="withdraw-confirm-password" aria-label="Mostrar senha">
+                <img src="{% static 'mbank/assets/d5972.svg' %}" alt="" width="16" height="11">
+              </button>
+            </div>
+            <span style="font-size:12px;color:var(--text-muted);">
+              Confirmação obrigatória de segurança para liberar o código de saque.
+            </span>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:10px;">
+            <button type="button" class="mb-btn-secondary" data-close-modal="modal-withdraw-confirm">Voltar</button>
+            <button type="submit" class="mb-btn-primary" id="withdraw-execute-btn">Autorizar saque</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal de Confirmação / Código Gerado -->
     <div class="mb-modal-backdrop" id="modal-withdraw-result">
       <div class="mb-modal">
@@ -157,31 +210,93 @@
       });
     });
 
-    submitBtn.addEventListener('click', async function () {
+    let pendingKey = null;
+    const wcForm = document.getElementById('form-withdraw-confirm');
+    const wcPass = document.getElementById('withdraw-confirm-password');
+    const wcErr = document.getElementById('withdraw-confirm-error');
+    const wcExecBtn = document.getElementById('withdraw-execute-btn');
+
+    function selectedIban() {
+      if (accountSel.tagName === 'SELECT') {
+        return accountSel.options[accountSel.selectedIndex].getAttribute('data-iban');
+      }
+      return accountSel.getAttribute('data-iban');
+    }
+
+    submitBtn.addEventListener('click', function () {
       const amount = window.mBank.parseBRL(amountInput.value);
       if (!Number.isFinite(amount) || amount <= 0) {
         window.mBank.toast('Informe um valor válido para saque.', 'error');
         return;
       }
-      submitBtn.disabled = true;
+      pendingKey = window.mBank.uuid4();
+      document.getElementById('wc-iban').textContent = selectedIban();
+      document.getElementById('wc-method').textContent = method === 'code' ? 'Código no Caixa' : 'QR Code no Caixa';
+      document.getElementById('wc-amount').textContent = 'R$ ' + window.mBank.formatBRL(amount);
+      wcErr.style.display = 'none';
+      wcErr.textContent = '';
+      wcPass.value = '';
+      window.mBank.openModal('modal-withdraw-confirm');
+      setTimeout(function () { wcPass.focus(); }, 60);
+    });
+
+    wcForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const amount = window.mBank.parseBRL(amountInput.value);
+      const password = wcPass.value;
+      if (!password) {
+        wcErr.textContent = 'Digite a senha da sua conta para autorizar.';
+        wcErr.style.display = 'block';
+        return;
+      }
+      wcErr.style.display = 'none';
+      wcExecBtn.disabled = true;
       try {
-        const res = await window.mBank.apiFetch('/bank/api/accounts/' + accountSel.value + '/saque/', {
+        const response = await fetch('/bank/api/accounts/' + accountSel.value + '/saque/', {
           method: 'POST',
-          body: { amount: amount.toFixed(2), request_key: window.mBank.uuid4() }
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.mBank.getCookie('csrftoken')
+          },
+          body: JSON.stringify({
+            amount: amount.toFixed(2),
+            password: password,
+            request_key: pendingKey || window.mBank.uuid4()
+          })
         });
+        const res = await response.json().catch(function () { return {}; });
+        if (!response.ok) {
+          let msg = res.detail || 'Não foi possível autorizar o saque.';
+          if (res.code === 'PASSWORD_BLOCKED' && res.retry_at) {
+            const dt = new Date(res.retry_at);
+            if (!Number.isNaN(dt.getTime())) {
+              msg += ' Tente novamente após ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '.';
+            }
+          }
+          wcErr.textContent = msg;
+          wcErr.style.display = 'block';
+          wcPass.value = '';
+          wcPass.focus();
+          return;
+        }
+        window.mBank.closeModal('modal-withdraw-confirm');
         availDisplay.textContent = 'R$ ' + window.mBank.formatBRL(res.account.available_balance);
         if (accountSel.tagName === 'SELECT') {
           accountSel.options[accountSel.selectedIndex].setAttribute('data-available', res.account.available_balance);
+        } else {
+          accountSel.setAttribute('data-available', res.account.available_balance);
         }
         document.getElementById('withdraw-code-value').textContent = res.withdrawal_code;
         document.getElementById('withdraw-code-amount').textContent =
           'Valor sacado: R$ ' + window.mBank.formatBRL(amount) + ' · Novo saldo disponível: R$ ' + window.mBank.formatBRL(res.account.available_balance);
         window.mBank.openModal('modal-withdraw-result');
-        window.mBank.toast('Saque realizado com sucesso!');
+        window.mBank.toast('Saque autorizado com sucesso!');
       } catch (err) {
-        window.mBank.toast(err.message, 'error');
+        wcErr.textContent = err.message || 'Erro ao comunicar com o servidor.';
+        wcErr.style.display = 'block';
       } finally {
-        submitBtn.disabled = false;
+        wcExecBtn.disabled = false;
       }
     });
   })();

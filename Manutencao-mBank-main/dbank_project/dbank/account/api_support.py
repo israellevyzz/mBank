@@ -4,16 +4,21 @@ from datetime import timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+from django.conf import settings
+from django.db import transaction as db_transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
+from django.utils.decorators import method_decorator
+from django.views.decorators.debug import sensitive_post_parameters
 from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .context_processors import compute_initials
-from .models import Account, Client, Transaction
+from .models import Account, Client, PurchasePasswordCounter, Transaction
 
 
 def generate_unique_iban():
@@ -119,14 +124,70 @@ def _parse_request_key(request):
         return uuid4()
 
 
+def verify_operation_password(request, password):
+    """Validate the authenticated user's password with brute-force lockout protection."""
+    now = timezone.now()
+    window = timedelta(seconds=settings.PURCHASE_PASSWORD_WINDOW_SECONDS)
+    origin = salted_hmac('purchase-origin', request.META.get('REMOTE_ADDR', 'unknown')).hexdigest()
+    with db_transaction.atomic():
+        counters = []
+        for scope in [f'customer:{request.user.pk}', f'origin:{origin}']:
+            counter, _ = PurchasePasswordCounter.objects.select_for_update().get_or_create(
+                scope=scope,
+                defaults={'window_start': now},
+            )
+            counters.append(counter)
+        until = max((c.blocked_until for c in counters if c.blocked_until), default=None)
+        if until and until > now:
+            return Response(
+                {
+                    'code': 'PASSWORD_BLOCKED',
+                    'detail': 'Muitas tentativas incorretas. Aguarde para tentar novamente.',
+                    'retry_at': until,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        if password and request.user.check_password(password):
+            PurchasePasswordCounter.objects.filter(pk=counters[0].pk).delete()
+            return None
+        for counter in counters:
+            if counter.blocked_until or counter.window_start + window <= now:
+                counter.failures = 0
+                counter.window_start = now
+                counter.blocked_until = None
+            counter.failures += 1
+            if counter.failures >= settings.PURCHASE_PASSWORD_MAX_ATTEMPTS:
+                counter.blocked_until = now + timedelta(seconds=settings.PURCHASE_PASSWORD_BLOCK_SECONDS)
+            counter.save()
+        if any(c.blocked_until for c in counters):
+            return Response(
+                {
+                    'code': 'PASSWORD_BLOCKED',
+                    'detail': 'Muitas tentativas incorretas. Aguarde para tentar novamente.',
+                    'retry_at': max(c.blocked_until for c in counters if c.blocked_until),
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        return Response(
+            {'code': 'INVALID_PASSWORD', 'detail': 'Senha incorreta. Confira sua senha e tente novamente.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
 class AmountInput(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('0.01'))
+
+
+class WithdrawInput(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('0.01'))
+    password = serializers.CharField(trim_whitespace=False, write_only=True, max_length=4096)
 
 
 class TransferInput(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('0.01'))
     dest_iban = serializers.CharField(max_length=128, required=False, allow_blank=True)
     dest_account_id = serializers.IntegerField(min_value=1, required=False)
+    password = serializers.CharField(trim_whitespace=False, write_only=True, max_length=4096)
 
 
 class MeView(APIView):
@@ -171,13 +232,17 @@ class AccountDepositView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(sensitive_post_parameters('password'), name='dispatch')
 class AccountWithdrawView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         account = get_object_or_404(Account, pk=pk, owner=request.user)
-        form = AmountInput(data=request.data)
+        form = WithdrawInput(data=request.data)
         form.is_valid(raise_exception=True)
+        password_failure = verify_operation_password(request, form.validated_data['password'])
+        if password_failure is not None:
+            return password_failure
         key = _parse_request_key(request)
         try:
             entry = account.withdraw(form.validated_data['amount'], actor=request.user, key=key)
@@ -192,6 +257,7 @@ class AccountWithdrawView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(sensitive_post_parameters('password'), name='dispatch')
 class AccountTransferView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -229,6 +295,10 @@ class AccountTransferView(APIView):
                 {'detail': 'Escolha uma conta de destino diferente da conta de origem.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        password_failure = verify_operation_password(request, data['password'])
+        if password_failure is not None:
+            return password_failure
 
         key = _parse_request_key(request)
         try:
