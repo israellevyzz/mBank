@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% load static mbank_tags %}
+
+{% block title %}Empréstimo — mBank{% endblock %}
+
+{% block content %}
+  <div class="mb-loan-wrap">
+    <div class="mb-loan-header">
+      <h2 style="margin:0;font-size:18px;font-weight:700;color:var(--text-heading);letter-spacing:-0.4px;">
+        Simular Empréstimo
+      </h2>
+      <p style="margin:0;font-size:15.5px;color:var(--text-secondary);">
+        Limite pré-aprovado disponível:
+        <strong id="loan-limit-display" style="color:var(--positive-emerald);font-weight:600;">R$ —</strong>
+      </p>
+    </div>
+
+    <section class="mb-loan-card">
+      <div id="loan-account-wrap" class="mb-field-group" style="display:none;">
+        <label class="mb-field-label muted" for="loan-account-select">Conta para crédito</label>
+        <select id="loan-account-select" class="mb-input"></select>
+      </div>
+
+      <!-- Quanto você precisa? -->
+      <div class="mb-field-group">
+        <label class="mb-field-label muted" for="loan-amount-input">Quanto você precisa?</label>
+        <div class="mb-loan-input-box">
+          <span style="font-weight:700;color:var(--brand-lavender);font-size:16px;">R$</span>
+          <input type="text" id="loan-amount-input" value="3.000,00" inputmode="decimal" aria-label="Valor solicitado">
+          <img src="{% static 'mbank/assets/80bea.svg' %}" alt="" width="20" height="15">
+        </div>
+        <span id="loan-range-hint" style="font-size:12px;color:var(--text-subtle);"></span>
+      </div>
+
+      <!-- Em quantas vezes? -->
+      <div class="mb-field-group">
+        <label class="mb-field-label muted" for="loan-installments-input">Em quantas vezes?</label>
+        <div class="mb-loan-input-box">
+          <input type="number" id="loan-installments-input" value="12" min="1" max="36" step="1" aria-label="Número de parcelas">
+          <span style="font-weight:600;color:#6b687c;font-size:15px;">vezes</span>
+        </div>
+        <div class="mb-loan-quick-grid" id="loan-quick-grid">
+          <button type="button" class="mb-loan-quick-btn" data-n="6">6x</button>
+          <button type="button" class="mb-loan-quick-btn active" data-n="12">12x</button>
+          <button type="button" class="mb-loan-quick-btn" data-n="24">24x</button>
+          <button type="button" class="mb-loan-quick-btn" data-n="36">36x</button>
+        </div>
+      </div>
+
+      <!-- Error / Limit warning -->
+      <div id="loan-warning" class="mb-auth-error" style="display:none;"></div>
+
+      <!-- Estimativa de pagamento -->
+      <div class="mb-loan-summary">
+        <div class="mb-loan-summary-row">
+          <span style="color:var(--text-secondary);">Parcela estimada</span>
+          <strong id="loan-installment-result" style="color:var(--brand-lavender);font-weight:700;">—</strong>
+        </div>
+        <div class="mb-loan-summary-row">
+          <span style="color:var(--text-secondary);">Total a pagar</span>
+          <strong id="loan-total-result" style="color:var(--text-heading);font-weight:600;">—</strong>
+        </div>
+        <div id="loan-rate-meta" style="font-size:12px;color:var(--text-subtle);padding-top:4px;">
+          Estimativa de pagamento calculada no servidor
+        </div>
+      </div>
+
+      <!-- Accordion: Detalhes das parcelas -->
+      <details class="mb-loan-details" id="loan-schedule-details">
+        <summary>
+          <span style="display:inline-flex;align-items:center;gap:8px;">
+            <img src="{% static 'mbank/assets/21709.svg' %}" alt="" width="14" height="15">
+            <span id="loan-details-summary">Ver detalhes das parcelas</span>
+          </span>
+          <img src="{% static 'mbank/assets/2ebfd.svg' %}" alt="" width="10" height="7" class="mb-chevron">
+        </summary>
+        <div class="mb-schedule-table-wrap">
+          <table class="mb-schedule-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Vencimento</th>
+                <th>Parcela</th>
+                <th>Juros</th>
+                <th>Amortização</th>
+                <th>Saldo</th>
+              </tr>
+            </thead>
+            <tbody id="loan-schedule-tbody"></tbody>
+          </table>
+          <ul id="loan-assumptions" style="margin:12px 0 0;padding-left:18px;font-size:12px;color:var(--text-subtle);line-height:1.5;"></ul>
+        </div>
+      </details>
+
+      <!-- CTA Button -->
+      <button type="button" class="mb-btn-primary" id="loan-contract-btn" style="width:100%;padding:16px 24px;font-size:16px;">
+        <span>Contratar Empréstimo</span>
+        <img src="{% static 'mbank/assets/77060.svg' %}" alt="" width="14" height="14">
+      </button>
+    </section>
+  </div>
+
+  <!-- Modal Resumo da Simulação -->
+  <div class="mb-modal-backdrop" id="modal-loan-info">
+    <div class="mb-modal">
+      <div class="mb-modal-header">
+        <h3 class="mb-modal-title">Resumo da Estimativa</h3>
+        <button type="button" class="mb-modal-close" data-close-modal="modal-loan-info">&times;</button>
+      </div>
+      <p class="mb-page-subtitle" id="loan-modal-text"></p>
+      <div id="loan-modal-box" style="background:var(--bg-elevated);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;font-size:14px;"></div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button type="button" class="mb-btn-primary" data-close-modal="modal-loan-info">Entendi</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const amountInput = document.getElementById('loan-amount-input');
+    const instInput = document.getElementById('loan-installments-input');
+    const quickGrid = document.getElementById('loan-quick-grid');
+    const accountWrap = document.getElementById('loan-account-wrap');
+    const accountSel = document.getElementById('loan-account-select');
+    const warningEl = document.getElementById('loan-warning');
+    const instResEl = document.getElementById('loan-installment-result');
+    const totalResEl = document.getElementById('loan-total-result');
+    const rateMetaEl = document.getElementById('loan-rate-meta');
+    const summaryEl = document.getElementById('loan-details-summary');
+    const tbody = document.getElementById('loan-schedule-tbody');
+    const assumptionsEl = document.getElementById('loan-assumptions');
+    const contractBtn = document.getElementById('loan-contract-btn');
+
+    let config = null;
+    let lastSim = null;
+    let timer = null;
+
+    function fmtIsoDate(iso) {
+      if (!iso) return '';
+      const p = iso.split('-');
+      return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
+    }
+
+    function syncQuickButtons() {
+      const val = parseInt(instInput.value, 10);
+      quickGrid.querySelectorAll('.mb-loan-quick-btn').forEach(function (b) {
+        b.classList.toggle('active', parseInt(b.getAttribute('data-n'), 10) === val);
+      });
+    }
+
+    async function runSimulation() {
+      if (!config) return;
+      const amount = window.mBank.parseBRL(amountInput.value);
+      const installments = parseInt(instInput.value, 10);
+      warningEl.style.display = 'none';
+
+      if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(installments) || installments < 1) {
+        return;
+      }
+
+      const body = { amount: amount.toFixed(2), installments: installments };
+      if (accountSel && accountSel.value) body.account_id = Number(accountSel.value);
+
+      try {
+        const res = await window.mBank.apiFetch('/bank/api/emprestimos/simular/', {
+          method: 'POST',
+          body: body
+        });
+        lastSim = res;
+
+        const instLabel = res.installments + 'x de R$ ' + window.mBank.formatBRL(res.installment_amount);
+        instResEl.textContent = instLabel;
+        totalResEl.textContent = 'R$ ' + window.mBank.formatBRL(res.total_payable);
+        summaryEl.textContent = 'Ver detalhes das parcelas (' + instLabel + ')';
+
+        const mRate = (parseFloat(res.monthly_interest_rate) * 100).toFixed(2).replace('.', ',');
+        const aRate = (parseFloat(res.annual_effective_rate) * 100).toFixed(2).replace('.', ',');
+        rateMetaEl.textContent =
+          'Estimativa de pagamento · Taxa ' + mRate + '% a.m. (' + aRate + '% a.a.) · Ref. ' +
+          fmtIsoDate(res.reference_date) + ' · Política ' + res.policy_version;
+
+        if (!res.can_contract && res.exceeds_limit_message) {
+          warningEl.textContent = res.exceeds_limit_message;
+          warningEl.style.display = 'block';
+        }
+
+        tbody.innerHTML = (res.installments_schedule || []).map(function (r) {
+          return (
+            '<tr>' +
+              '<td>' + r.number + '</td>' +
+              '<td>' + fmtIsoDate(r.due_date) + '</td>' +
+              '<td><strong>R$ ' + window.mBank.formatBRL(r.total_amount) + '</strong></td>' +
+              '<td>R$ ' + window.mBank.formatBRL(r.interest_amount) + '</td>' +
+              '<td>R$ ' + window.mBank.formatBRL(r.amortization_amount) + '</td>' +
+              '<td>R$ ' + window.mBank.formatBRL(r.closing_balance) + '</td>' +
+            '</tr>'
+          );
+        }).join('');
+
+        assumptionsEl.innerHTML = (res.assumptions || []).map(function (a) {
+          return '<li>' + a + '</li>';
+        }).join('');
+      } catch (err) {
+        lastSim = null;
+        warningEl.textContent = err.message;
+        warningEl.style.display = 'block';
+        instResEl.textContent = '—';
+        totalResEl.textContent = '—';
+        tbody.innerHTML = '';
+      }
+    }
+
+    function scheduleSim() {
+      syncQuickButtons();
+      clearTimeout(timer);
+      timer = setTimeout(runSimulation, 240);
+    }
+
+    async function init() {
+      try {
+        config = await window.mBank.apiFetch('/bank/api/emprestimos/config/');
+        document.getElementById('loan-limit-display').textContent = 'R$ ' + window.mBank.formatBRL(config.preapproved_limit_available);
+        document.getElementById('loan-range-hint').textContent =
+          'Faixa permitida: R$ ' + window.mBank.formatBRL(config.min_amount) + ' a R$ ' + window.mBank.formatBRL(config.max_amount) +
+          ' · ' + config.min_installments + 'x a ' + config.max_installments + 'x';
+        instInput.min = config.min_installments;
+        instInput.max = config.max_installments;
+
+        if (config.accounts && config.accounts.length > 1) {
+          accountWrap.style.display = 'flex';
+          accountSel.innerHTML = config.accounts.map(function (a) {
+            return '<option value="' + a.id + '">IBAN ' + a.iban + '</option>';
+          }).join('');
+        } else if (config.accounts && config.accounts.length === 1) {
+          accountSel.innerHTML = '<option value="' + config.accounts[0].id + '">' + config.accounts[0].iban + '</option>';
+        }
+
+        if (config.quick_installments && config.quick_installments.length) {
+          quickGrid.innerHTML = config.quick_installments.map(function (n) {
+            return '<button type="button" class="mb-loan-quick-btn" data-n="' + n + '">' + n + 'x</button>';
+          }).join('');
+          quickGrid.querySelectorAll('.mb-loan-quick-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              instInput.value = btn.getAttribute('data-n');
+              syncQuickButtons();
+              runSimulation();
+            });
+          });
+        }
+        syncQuickButtons();
+        runSimulation();
+      } catch (err) {
+        warningEl.textContent = err.message;
+        warningEl.style.display = 'block';
+      }
+    }
+
+    amountInput.addEventListener('input', scheduleSim);
+    instInput.addEventListener('input', scheduleSim);
+    accountSel.addEventListener('change', runSimulation);
+
+    contractBtn.addEventListener('click', function () {
+      if (!lastSim) {
+        window.mBank.toast('Ajuste os valores para gerar uma simulação válida.', 'error');
+        return;
+      }
+      if (!lastSim.can_contract) {
+        window.mBank.toast(lastSim.exceeds_limit_message || 'Valor acima do limite pré-aprovado.', 'error');
+        return;
+      }
+      document.getElementById('loan-modal-text').textContent =
+        'Esta simulação é uma Estimativa de Pagamento oficial (Política ' + lastSim.policy_version + '). O backend atual expõe somente o simulador (nenhuma dívida foi criada nem saldo movimentado).';
+      document.getElementById('loan-modal-box').innerHTML =
+        '<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Valor solicitado</span><strong>R$ ' + window.mBank.formatBRL(lastSim.principal_amount) + '</strong></div>' +
+        '<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Parcelamento</span><strong style="color:var(--brand-lavender);">' + lastSim.installments + 'x de R$ ' + window.mBank.formatBRL(lastSim.installment_amount) + '</strong></div>' +
+        '<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Juros totais</span><strong>R$ ' + window.mBank.formatBRL(lastSim.total_interest) + '</strong></div>' +
+        '<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Total a pagar</span><strong>R$ ' + window.mBank.formatBRL(lastSim.total_payable) + '</strong></div>';
+      window.mBank.openModal('modal-loan-info');
+    });
+
+    init();
+  })();
+</script>
+{% endblock %}

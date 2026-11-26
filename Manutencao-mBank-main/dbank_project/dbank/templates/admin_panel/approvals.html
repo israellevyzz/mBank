@@ -1,0 +1,156 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load static %}
+
+{% block title %}Aprovações — Painel Administrativo mBank{% endblock %}
+
+{% block content %}
+  <section class="mb-page-intro-row">
+    <div class="mb-page-intro">
+      <h1 class="mb-page-title-lg">Aprovações de Cadastro</h1>
+      <p class="mb-page-subtitle">Analise os dados cadastrais e decida pela liberação ou recusa de novas contas.</p>
+    </div>
+    <span class="mba-status-chip pending" style="padding:6px 14px;font-size:12.5px;">
+      <span class="dot"></span>
+      <span>{{ pending_count }} {% if pending_count == 1 %}pendente{% else %}pendentes{% endif %} na fila</span>
+    </span>
+  </section>
+
+  {% if queue %}
+    <section class="mba-approvals-grid">
+      <!-- Left Queue -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="background:var(--bg-elevated);border-radius:10px;padding:9px 14px;font-size:11px;font-weight:700;letter-spacing:0.6px;color:var(--text-secondary);text-transform:uppercase;">
+          SOLICITAÇÕES NA FILA
+        </div>
+
+        {% for item in queue %}
+          <a href="{% url 'admin_approvals' %}?id={{ item.id }}" class="mba-queue-item {% if item.is_selected %}selected{% endif %}">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+              <div class="mb-avatar" style="width:40px;height:40px;font-size:13px;">{{ item.initials }}</div>
+              <div style="min-width:0;">
+                <div style="font-size:13.5px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ item.name }}</div>
+                <div style="font-size:12px;color:var(--text-secondary);">{{ item.doc }}</div>
+              </div>
+            </div>
+            <span class="mba-status-chip pending" style="font-size:10.5px;padding:2px 8px;">Pendente</span>
+          </a>
+        {% endfor %}
+      </div>
+
+      <!-- Right Detail Panel -->
+      {% if selected %}
+        <div class="mba-panel" style="gap:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--border-line);flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div class="mb-avatar" style="width:48px;height:48px;font-size:16px;">{{ selected.initials }}</div>
+              <div>
+                <h2 style="margin:0;font-size:18px;font-weight:700;color:var(--text-heading);">{{ selected.name }}</h2>
+                <div style="font-size:12.5px;color:var(--text-secondary);margin-top:2px;">Solicitado em {{ selected.joined_str }}</div>
+              </div>
+            </div>
+            <span class="mba-status-chip pending">Aguardando análise</span>
+          </div>
+
+          <!-- Dados Pessoais -->
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-heading);">
+              <img src="{% static 'mbank/assets/69633.svg' %}" alt="" width="14" height="14">
+              <span>Dados Pessoais do Solicitante</span>
+            </div>
+            <div class="mba-info-grid">
+              <div>
+                <div style="font-size:11px;color:var(--text-subtle);">Nome Completo</div>
+                <div style="font-size:14px;font-weight:600;color:var(--text-heading);margin-top:3px;">{{ selected.name }}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-subtle);">CPF / Documento</div>
+                <div style="font-size:14px;font-weight:600;color:var(--text-heading);font-family:var(--font-mono);margin-top:3px;">{{ selected.doc }}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-subtle);">Data de Nascimento</div>
+                <div style="font-size:14px;font-weight:600;color:var(--text-heading);margin-top:3px;">{{ selected.birth_date }}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-subtle);">Celular</div>
+                <div style="font-size:14px;font-weight:600;color:var(--text-heading);margin-top:3px;">{{ selected.phone_number }}</div>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <div style="font-size:11px;color:var(--text-subtle);">E-mail</div>
+                <div style="font-size:14px;font-weight:600;color:var(--text-heading);margin-top:3px;">{{ selected.email }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tipo de Conta -->
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-heading);">
+              <img src="{% static 'mbank/assets/d6729.svg' %}" alt="" width="15" height="14">
+              <span>Produto Solicitado</span>
+            </div>
+            <div class="mba-list-row">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:var(--bg-elevated-3);display:flex;align-items:center;justify-content:center;">
+                  <img src="{% static 'mbank/assets/38223.svg' %}" alt="" width="17" height="15">
+                </div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:var(--text-heading);">Conta {{ selected.account_type }}</div>
+                  <div style="font-size:12px;color:var(--text-secondary);">Conta padrão com cartão de débito e IBAN mBank</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Actions -->
+          <div style="display:flex;justify-content:flex-end;gap:12px;padding-top:16px;border-top:1px solid var(--border-line);">
+            <button
+              type="button"
+              class="mb-btn-secondary js-decide-approval"
+              data-id="{{ selected.id }}"
+              data-decision="REJECT"
+              style="color:var(--negative-coral);border:1px solid rgba(255,180,171,0.3);background:rgba(147,0,10,0.18);"
+            >
+              ✕ Recusar
+            </button>
+            <button
+              type="button"
+              class="mb-btn-primary js-decide-approval"
+              data-id="{{ selected.id }}"
+              data-decision="APPROVE"
+            >
+              ✓ Aprovar Cadastro
+            </button>
+          </div>
+        </div>
+      {% endif %}
+    </section>
+  {% else %}
+    <div class="mba-panel mb-empty-state">
+      Todas as solicitações de cadastro foram avaliadas! Nenhum item pendente na fila.
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    document.querySelectorAll('.js-decide-approval').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        const id = btn.getAttribute('data-id');
+        const decision = btn.getAttribute('data-decision');
+        btn.disabled = true;
+        try {
+          const res = await window.mBank.apiFetch('/painel-admin/api/aprovacoes/' + id + '/decidir/', {
+            method: 'POST',
+            body: { decision: decision }
+          });
+          window.mBank.toast(res.detail);
+          window.location.href = "{% url 'admin_approvals' %}";
+        } catch (err) {
+          window.mBank.toast(err.message, 'error');
+          btn.disabled = false;
+        }
+      });
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,236 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crie sua conta — mBank</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'mbank/css/mbank.css' %}">
+</head>
+<body>
+  <div class="mb-auth-page">
+    <section class="mb-auth-left">
+      <div class="mb-auth-wave">
+        <img src="{% static 'mbank/assets/911ce.png' %}" alt="">
+      </div>
+
+      <div class="mb-auth-left-inner">
+        <a href="{% url 'home' %}" class="mb-brand">
+          <div class="mb-brand-logo-wrap" style="width:53px;height:56px;">
+            <img src="{% static 'mbank/assets/8cf0b.png' %}" alt="mBank">
+          </div>
+          <div class="mb-brand-text">
+            <span class="mb-brand-name" style="font-size:42px;">mBank</span>
+            <span class="mb-brand-tagline" style="font-size:15px;">Seu banco, do seu jeito</span>
+          </div>
+        </a>
+
+        <div>
+          <h1 class="mb-auth-headline register">
+            Abra sua conta
+            <span class="gradient-text">e tenha controle</span>
+            <span class="gradient-text">da sua vida financeira.</span>
+          </h1>
+          <p class="mb-auth-desc">
+            No mBank, você tem tudo o que precisa para cuidar do seu dinheiro de forma simples, segura e sem complicação.
+          </p>
+        </div>
+
+        <div class="mb-auth-features">
+          <div class="mb-auth-feature">
+            <img src="{% static 'mbank/assets/27a9f.svg' %}" alt="">
+            <span>Conta digital gratuita</span>
+          </div>
+          <div class="mb-auth-feature">
+            <img src="{% static 'mbank/assets/74908.svg' %}" alt="">
+            <span>Pix e transferências instantâneas</span>
+          </div>
+          <div class="mb-auth-feature">
+            <img src="{% static 'mbank/assets/ba547.svg' %}" alt="">
+            <span>Segurança de ponta</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-auth-left-footer">
+        <p class="mb-auth-footer-brand">mBank</p>
+        <p class="mb-auth-footer-sub">Mais que um banco, é o seu futuro.</p>
+      </div>
+    </section>
+
+    <section class="mb-auth-right">
+      <div class="mb-auth-card register-card">
+        <div class="mb-auth-logo-sm">
+          <img src="{% static 'mbank/assets/8cf0b.png' %}" alt="mBank" style="width:48px;height:42px;">
+          <span style="font-size:26px;">mBank</span>
+        </div>
+
+        {% if pending_submitted %}
+          <div style="display:flex;flex-direction:column;gap:16px;padding:10px 0;">
+            <div>
+              <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,0.16);border:1px solid rgba(245,158,11,0.35);color:#fbbf24;border-radius:9999px;padding:4px 12px;font-size:11px;font-weight:700;letter-spacing:0.6px;">
+                ● EM ANÁLISE
+              </span>
+              <h2 style="font-family:var(--font-inter);font-size:23px;font-weight:700;color:#fff;margin:12px 0 6px;">
+                Cadastro enviado para análise!
+              </h2>
+              <p style="font-family:var(--font-inter);font-size:14px;color:var(--text-secondary);margin:0;line-height:1.55;">
+                Recebemos sua solicitação, <strong style="color:#fff;">{{ submitted_client.name }}</strong>. Um administrador do mBank vai revisar seus dados na fila de aprovações e liberar sua conta em breve.
+              </p>
+            </div>
+
+            <div style="background:rgba(16,8,34,0.8);border:1px solid var(--border-line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px;">
+              <div style="display:flex;justify-content:space-between;gap:12px;">
+                <span style="color:var(--text-muted);">CPF / Usuário</span>
+                <span style="color:#fff;font-weight:600;">{{ submitted_client.cpf }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;gap:12px;">
+                <span style="color:var(--text-muted);">E-mail</span>
+                <span style="color:#fff;font-weight:600;">{{ submitted_client.email }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;gap:12px;">
+                <span style="color:var(--text-muted);">Status</span>
+                <span style="color:#fbbf24;font-weight:600;">Aguardando aprovação</span>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+              <a href="{% url 'home' %}" class="mb-register-submit" style="text-decoration:none;">
+                <span>Voltar para a página inicial</span>
+              </a>
+              <a href="{% url 'login' %}" style="text-align:center;font-family:var(--font-inter);font-size:13px;color:var(--brand-accent-link);font-weight:600;text-decoration:underline;">
+                Já foi aprovado? Ir para o login
+              </a>
+            </div>
+          </div>
+        {% else %}
+        <div>
+          <h2 style="font-family:var(--font-inter);font-size:24px;font-weight:700;color:#fff;margin:8px 0 4px;">
+            Crie a sua conta
+          </h2>
+          <p style="font-family:var(--font-inter);font-size:14px;color:var(--text-muted);margin:0;">
+            É rápido, seguro e totalmente gratuito.
+          </p>
+        </div>
+
+        {% if errors %}
+          <div class="mb-auth-error">
+            {% for err in errors %}<div>{{ err }}</div>{% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'register' %}" style="display:flex;flex-direction:column;gap:12px;margin-top:6px;">
+          {% csrf_token %}
+
+          <div>
+            <label class="mb-reg-label" for="reg_name">Nome completo <span class="req">*</span></label>
+            <div class="mb-auth-input-wrap compact">
+              <input type="text" id="reg_name" name="name" value="{{ values.name|default:'' }}" placeholder="Digite seu nome completo" required>
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-reg-label" for="reg_cpf">CPF <span class="req">*</span></label>
+            <div class="mb-auth-input-wrap compact">
+              <input type="text" id="reg_cpf" name="cpf" value="{{ values.cpf|default:'' }}" placeholder="000.000.000-00" required>
+            </div>
+          </div>
+
+          <div class="mb-reg-row-2">
+            <div>
+              <label class="mb-reg-label" for="reg_birth">Nascimento <span class="req">*</span></label>
+              <div class="mb-auth-input-wrap compact">
+                <input type="text" id="reg_birth" name="birth_date" value="{{ values.birth_date|default:'' }}" placeholder="DD/MM/AAAA">
+              </div>
+            </div>
+            <div>
+              <label class="mb-reg-label" for="reg_phone">Celular <span class="req">*</span></label>
+              <div class="mb-auth-input-wrap compact">
+                <input type="text" id="reg_phone" name="phone_number" value="{{ values.phone_number|default:'' }}" placeholder="(00) 00000-0000">
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-reg-label" for="reg_email">E-mail <span class="req">*</span></label>
+            <div class="mb-auth-input-wrap compact">
+              <input type="email" id="reg_email" name="email" value="{{ values.email|default:'' }}" placeholder="email@exemplo.com" required>
+            </div>
+          </div>
+
+          <div class="mb-reg-row-2">
+            <div>
+              <label class="mb-reg-label" for="reg_pass">Senha <span class="req">*</span></label>
+              <div class="mb-auth-input-wrap compact">
+                <input type="password" id="reg_pass" name="password" placeholder="********" required>
+                <button type="button" class="mb-eye-btn" data-toggle-password="reg_pass" aria-label="Mostrar senha">
+                  <img src="{% static 'mbank/assets/ccc26.svg' %}" alt="" width="12" height="9">
+                </button>
+              </div>
+            </div>
+            <div>
+              <label class="mb-reg-label" for="reg_pass2">Confirmar senha <span class="req">*</span></label>
+              <div class="mb-auth-input-wrap compact">
+                <input type="password" id="reg_pass2" name="password_confirm" placeholder="********" required>
+                <button type="button" class="mb-eye-btn" data-toggle-password="reg_pass2" aria-label="Mostrar confirmação de senha">
+                  <img src="{% static 'mbank/assets/ccc26.svg' %}" alt="" width="12" height="9">
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="mb-register-submit">
+            <span>Criar conta</span>
+            <img src="{% static 'mbank/assets/c57e2.svg' %}" alt="" width="14" height="14">
+          </button>
+        </form>
+
+        <p style="font-family:var(--font-inter);font-size:12px;color:var(--text-muted);text-align:center;margin:8px 0 0;">
+          Já tem uma conta?
+          <a href="{% url 'login' %}" style="color:var(--brand-accent-link);font-weight:700;text-decoration:underline;margin-left:4px;">
+            Entrar no mBank
+          </a>
+        </p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <script src="{% static 'mbank/js/mbank.js' %}"></script>
+  <script>
+    (function () {
+      const cpf = document.getElementById('reg_cpf');
+      const phone = document.getElementById('reg_phone');
+      const birth = document.getElementById('reg_birth');
+      if (cpf) {
+        cpf.addEventListener('input', function () {
+          let v = cpf.value.replace(/\D/g, '').slice(0, 11);
+          if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+          else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+          else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+          cpf.value = v;
+        });
+      }
+      if (phone) {
+        phone.addEventListener('input', function () {
+          let v = phone.value.replace(/\D/g, '').slice(0, 11);
+          if (v.length > 6) v = v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+          else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+          phone.value = v;
+        });
+      }
+      if (birth) {
+        birth.addEventListener('input', function () {
+          let v = birth.value.replace(/\D/g, '').slice(0, 8);
+          if (v.length > 4) v = v.replace(/(\d{2})(\d{2})(\d{1,4})/, '$1/$2/$3');
+          else if (v.length > 2) v = v.replace(/(\d{2})(\d{1,2})/, '$1/$2');
+          birth.value = v;
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

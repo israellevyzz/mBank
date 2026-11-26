@@ -1,0 +1,95 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load static mbank_tags %}
+
+{% block title %}Transações — Painel Administrativo mBank{% endblock %}
+
+{% block content %}
+  <section class="mb-page-intro">
+    <h1 class="mb-page-title-lg">Transações do Sistema</h1>
+    <p class="mb-page-subtitle">Registro de depósitos, saques e transferências realizadas</p>
+  </section>
+
+  <!-- Filters & Controls Bar -->
+  <form method="get" action="{% url 'admin_transactions' %}" class="mba-filter-card">
+    <input type="hidden" name="type" value="{{ active_type }}">
+    <div class="mba-search-wrap">
+      <img src="{% static 'mbank/assets/38489.svg' %}" alt="" width="15" height="15">
+      <input type="text" name="q" value="{{ query }}" placeholder="Buscar transações por cliente ou IBAN...">
+    </div>
+
+    <div class="mba-type-tabs">
+      <a href="?type=ALL{% if query %}&q={{ query|urlencode }}{% endif %}" class="mba-type-tab {% if active_type == 'ALL' %}active{% endif %}">Todas</a>
+      <a href="?type=TRANSFER{% if query %}&q={{ query|urlencode }}{% endif %}" class="mba-type-tab {% if active_type == 'TRANSFER' %}active{% endif %}">Transferências</a>
+      <a href="?type=DEPOSIT{% if query %}&q={{ query|urlencode }}{% endif %}" class="mba-type-tab {% if active_type == 'DEPOSIT' %}active{% endif %}">Depósitos</a>
+      <a href="?type=WITHDRAW{% if query %}&q={{ query|urlencode }}{% endif %}" class="mba-type-tab {% if active_type == 'WITHDRAW' %}active{% endif %}">Saques</a>
+      <a href="?type=PURCHASE{% if query %}&q={{ query|urlencode }}{% endif %}" class="mba-type-tab {% if active_type == 'PURCHASE' %}active{% endif %}">Compras</a>
+    </div>
+  </form>
+
+  <!-- Transactions Table -->
+  <section class="mba-table-card">
+    <div class="mba-table-wrap">
+      <table class="mba-table">
+        <thead>
+          <tr>
+            <th>Data / Hora</th>
+            <th>Tipo</th>
+            <th>Origem</th>
+            <th>Destino</th>
+            <th style="text-align:right;">Valor</th>
+            <th style="text-align:center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in rows %}
+            <tr>
+              <td>
+                <div style="font-weight:600;">{{ tx.date_str }}</div>
+                <div style="font-size:12px;color:var(--text-secondary);">{{ tx.time_str }}</div>
+              </td>
+              <td>
+                <span style="font-size:13px;font-weight:600;{% if tx.type_color == 'emerald' %}color:var(--positive-emerald);{% elif tx.type_color == 'coral' %}color:var(--negative-coral);{% else %}color:var(--brand-lavender);{% endif %}">
+                  {{ tx.type_label }}
+                </span>
+              </td>
+              <td>
+                <div style="font-weight:500;">{{ tx.origin_name }}</div>
+                {% if tx.origin_iban %}<div style="font-size:11.5px;font-family:var(--font-mono);color:var(--text-subtle);">{{ tx.origin_iban }}</div>{% endif %}
+              </td>
+              <td>
+                <div style="font-weight:500;">{{ tx.dest_name }}</div>
+                {% if tx.dest_iban %}<div style="font-size:11.5px;font-family:var(--font-mono);color:var(--text-subtle);">{{ tx.dest_iban }}</div>{% endif %}
+              </td>
+              <td style="text-align:right;font-weight:700;font-size:15px;white-space:nowrap;{% if tx.type_color == 'emerald' %}color:var(--positive-emerald);{% elif tx.type_color == 'coral' %}color:var(--negative-coral);{% else %}color:var(--text-heading);{% endif %}">
+                {{ tx.amount_prefix }}R$ {{ tx.amount|brl }}
+              </td>
+              <td style="text-align:center;">
+                <span class="mba-status-chip active">
+                  <span class="dot"></span>
+                  <span>Concluída</span>
+                </span>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="mb-empty-state">Nenhuma transação encontrada para os filtros atuais.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mba-table-footer">
+      <span>Mostrando {{ rows|length }} de {{ total_records }} transações</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}&type={{ active_type }}{% if query %}&q={{ query|urlencode }}{% endif %}" class="mb-btn-secondary" style="padding:5px 12px;font-size:12px;">Anterior</a>
+        {% endif %}
+        <span style="padding:0 6px;font-weight:600;color:var(--text-heading);">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}&type={{ active_type }}{% if query %}&q={{ query|urlencode }}{% endif %}" class="mb-btn-secondary" style="padding:5px 12px;font-size:12px;">Próxima</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

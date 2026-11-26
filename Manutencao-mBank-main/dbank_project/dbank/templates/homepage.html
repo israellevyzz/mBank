@@ -1,35 +1,122 @@
 {% extends "base.html" %}
+{% load static mbank_tags %}
+
+{% block title %}Home — mBank{% endblock %}
 
 {% block content %}
-
-    <!-- Main jumbotron for a primary marketing message or call to action -->
-    <div class="jumbotron">
-      <div class="container">
-        <h1>Hello, world!</h1>
-        <p>This is a template for a simple marketing or informational website. It includes a large callout called a jumbotron and three supporting pieces of content. Use it as a starting point to create something more unique.</p>
-        <p><a class="btn btn-primary btn-lg" href="#">Learn more &raquo;</a></p>
+  <!-- Hero Consolidated Balance -->
+  <section class="mb-hero-balance">
+    <span class="mb-hero-balance-label">Saldo disponível em conta</span>
+    <div class="mb-hero-balance-row">
+      <div>
+        <div class="mb-hero-balance-amount">R$ {{ total_available|brl }}</div>
+        <div class="mb-hero-balance-meta">
+          {{ open_accounts_count }} {% if open_accounts_count == 1 %}conta ativa{% else %}contas ativas{% endif %}
+          {% if total_reserved > 0 %}
+            · R$ {{ total_reserved|brl }} guardado no Cofrinho (Patrimônio total: R$ {{ total_balance|brl }})
+          {% else %}
+            · dados protegidos
+          {% endif %}
+        </div>
       </div>
+      <a href="{% url 'bank:accounts_list' %}" class="mb-btn-dark">Ver contas</a>
+    </div>
+  </section>
+
+  <!-- 3 KPI Cards -->
+  <section class="mb-kpi-grid">
+    <article class="mb-kpi-card">
+      <span class="mb-kpi-label">Entradas este mês</span>
+      <span class="mb-kpi-value inflow">R$ {{ inflows_total|brl }}</span>
+      <span class="mb-kpi-sub">{{ inflows_count }} {% if inflows_count == 1 %}movimentação{% else %}movimentações{% endif %}</span>
+    </article>
+
+    <article class="mb-kpi-card">
+      <span class="mb-kpi-label">Saídas este mês</span>
+      <span class="mb-kpi-value outflow">R$ {{ outflows_total|brl }}</span>
+      <span class="mb-kpi-sub">{{ outflows_count }} {% if outflows_count == 1 %}movimentação{% else %}movimentações{% endif %}</span>
+    </article>
+
+    <article class="mb-kpi-card">
+      <span class="mb-kpi-label">Contas abertas</span>
+      <span class="mb-kpi-value neutral">{{ open_accounts_count }}</span>
+      <span class="mb-kpi-sub">Nenhuma pendência</span>
+    </article>
+  </section>
+
+  <!-- Acesso rápido -->
+  <section style="display:flex;flex-direction:column;gap:14px;padding-top:6px;">
+    <div class="mb-section-head">
+      <h2 class="mb-section-title">Acesso rápido</h2>
+      <a href="{% url 'bank:transactions_list' %}" class="mb-link-accent">Ver extrato</a>
     </div>
 
-    <div class="container">
-      <!-- Example row of columns -->
-      <div class="row">
-        <div class="col-md-4">
-          <h2>Heading</h2>
-          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-          <p><a class="btn btn-default" href="#">View details &raquo;</a></p>
-        </div>
-        <div class="col-md-4">
-          <h2>Heading</h2>
-          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-          <p><a class="btn btn-default" href="#">View details &raquo;</a></p>
-       </div>
-        <div class="col-md-4">
-          <h2>Heading</h2>
-          <p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
-          <p><a class="btn btn-default" href="#">View details &raquo;</a></p>
-        </div>
-      </div>
+    <div class="mb-quick-grid">
+      <a href="{% url 'bank:deposit' %}" class="mb-quick-card">
+        <span class="mb-quick-card-icon"><img src="{% static 'mbank/assets/d8f3f.svg' %}" alt=""></span>
+        <span class="mb-quick-card-label">Depositar</span>
+      </a>
+      <a href="{% url 'bank:withdraw' %}" class="mb-quick-card">
+        <span class="mb-quick-card-icon"><img src="{% static 'mbank/assets/26ab5.svg' %}" alt=""></span>
+        <span class="mb-quick-card-label">Sacar</span>
+      </a>
+      <a href="{% url 'bank:transfer' %}" class="mb-quick-card">
+        <span class="mb-quick-card-icon"><img src="{% static 'mbank/assets/27c96.svg' %}" alt=""></span>
+        <span class="mb-quick-card-label">Transferir</span>
+      </a>
+      <a href="{% url 'bank:transactions_list' %}" class="mb-quick-card">
+        <span class="mb-quick-card-icon"><img src="{% static 'mbank/assets/3460f.svg' %}" alt=""></span>
+        <span class="mb-quick-card-label">Extrato</span>
+      </a>
+      <a href="{% url 'bank:loan' %}" class="mb-quick-card">
+        <span class="mb-quick-card-icon"><img src="{% static 'mbank/assets/e533b.svg' %}" alt=""></span>
+        <span class="mb-quick-card-label">Empréstimo</span>
+      </a>
+      <a href="{% url 'bank:piggy_bank' %}" class="mb-quick-card">
+        <span class="mb-quick-card-icon"><img src="{% static 'mbank/assets/6505a.svg' %}" alt=""></span>
+        <span class="mb-quick-card-label">Cofrinho</span>
+      </a>
+      <a href="{% url 'bank:accounts_list' %}?nova=1" class="mb-quick-card">
+        <span class="mb-quick-card-icon"><img src="{% static 'mbank/assets/2492c.svg' %}" alt=""></span>
+        <span class="mb-quick-card-label">Nova conta</span>
+      </a>
+    </div>
+  </section>
 
-    </div> <!-- /container -->
-    {% endblock %}
+  <!-- Últimas movimentações -->
+  <section class="mb-recent-card">
+    <div class="mb-recent-head">
+      <h2 class="mb-section-title">Últimas movimentações</h2>
+      <a href="{% url 'bank:transactions_list' %}" class="mb-link-accent">Ver todas</a>
+    </div>
+
+    {% if recent_transactions %}
+      {% for tx in recent_transactions %}
+        <div class="mb-recent-row">
+          <div class="mb-recent-row-left">
+            {% if tx.direction == 'in' %}
+              <div class="mb-tx-circle in">
+                <img src="{% static 'mbank/assets/f5f7c.svg' %}" alt="">
+              </div>
+            {% else %}
+              <div class="mb-tx-circle out">
+                <img src="{% static 'mbank/assets/d8783.svg' %}" alt="" class="rotate-180">
+              </div>
+            {% endif %}
+            <div>
+              <div class="mb-tx-title">{{ tx.title }}</div>
+              <div class="mb-tx-meta">{{ tx.meta_line }}</div>
+            </div>
+          </div>
+          <div class="mb-tx-amount {{ tx.direction }}">
+            {% if tx.direction == 'in' %}+ R$ {{ tx.amount|brl }}{% else %}− R$ {{ tx.amount|brl }}{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="mb-empty-state" style="border-top:1px solid var(--border-line);">
+        Nenhuma movimentação registrada ainda. Faça seu primeiro depósito para começar!
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

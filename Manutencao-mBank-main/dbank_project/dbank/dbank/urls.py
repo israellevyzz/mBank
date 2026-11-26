@@ -1,33 +1,40 @@
-"""dbank URL Configuration
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/4.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.conf import settings
-from django.urls import include, path
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
+from django.urls import include, path
 
-from account.views import HomePage
+from account.admin_panel import (
+    AdminApprovalDecisionView,
+    AdminApprovalsView,
+    AdminClientCreateAPIView,
+    AdminClientUpdateAPIView,
+    AdminClientsView,
+    AdminLoginView,
+    AdminOverviewView,
+    AdminTransactionsView,
+)
+from account.views import HomePage, LandingPageView, MBankLoginView, RegisterView
 
 urlpatterns = [
     path('', HomePage.as_view(), name='home'),
+    path('inicio/', LandingPageView.as_view(), name='landing'),
     path('admin/', admin.site.urls),
     path('bank/', include('account.urls')),
 
-    # login/logout (atualizado para as classes/views modernas do Django)
-    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    # Custom Admin Master Panel (Figma)
+    path('painel-admin/login/', AdminLoginView.as_view(), name='admin_login'),
+    path('painel-admin/', AdminOverviewView.as_view(), name='admin_overview'),
+    path('painel-admin/clientes/', AdminClientsView.as_view(), name='admin_clients'),
+    path('painel-admin/aprovacoes/', AdminApprovalsView.as_view(), name='admin_approvals'),
+    path('painel-admin/transacoes/', AdminTransactionsView.as_view(), name='admin_transactions'),
+    path('painel-admin/api/clientes/', AdminClientCreateAPIView.as_view(), name='admin_api_client_create'),
+    path('painel-admin/api/clientes/<int:pk>/atualizar/', AdminClientUpdateAPIView.as_view(), name='admin_api_client_update'),
+    path('painel-admin/api/aprovacoes/<int:pk>/decidir/', AdminApprovalDecisionView.as_view(), name='admin_api_approval_decision'),
+
+    # Auth routes
+    path('login/', MBankLoginView.as_view(), name='login'),
+    path('cadastro/', RegisterView.as_view(), name='register'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
 ]
 
 if settings.DEBUG:

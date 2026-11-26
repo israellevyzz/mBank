@@ -1,12 +1,42 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Make Transaction{% endblock %}
+{% block title %}Nova Transação — mBank{% endblock %}
 
 {% block content %}
-    <h1>Make Transaction</h1>
+  <section class="mb-page-intro">
+    <h2 class="mb-page-title-md">Nova Transação</h2>
+    <p class="mb-page-subtitle">Execute depósitos, saques ou transferências com idempotência.</p>
+  </section>
 
-    <form action="" method="post">{% csrf_token %}
-        {{ form.as_p }}
-        <input type="submit" value="Send" />
+  <section class="mb-form-panel" style="max-width:560px;">
+    {% if form.non_field_errors %}
+      <div class="mb-auth-error">
+        {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+      </div>
+    {% endif %}
+    {% if form.errors %}
+      <div class="mb-auth-error">{{ form.errors }}</div>
+    {% endif %}
+    <form method="post" style="display:flex;flex-direction:column;gap:16px;">
+      {% csrf_token %}
+      {{ form.request_key }}
+      <div class="mb-field-group">
+        <label class="mb-field-label" for="{{ form.src.id_for_label }}">Conta de origem</label>
+        {{ form.src }}
+      </div>
+      <div class="mb-field-group">
+        <label class="mb-field-label" for="{{ form.dest.id_for_label }}">Conta de destino</label>
+        {{ form.dest }}
+      </div>
+      <div class="mb-field-group">
+        <label class="mb-field-label" for="{{ form.amount.id_for_label }}">Valor (R$)</label>
+        {{ form.amount }}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <a href="{% url 'bank:transactions_list' %}" class="mb-btn-secondary">Cancelar</a>
+        <button type="submit" class="mb-btn-primary">Confirmar transação</button>
+      </div>
     </form>
+  </section>
 {% endblock %}

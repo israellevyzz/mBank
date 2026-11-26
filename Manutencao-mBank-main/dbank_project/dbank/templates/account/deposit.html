@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% load static mbank_tags %}
+
+{% block title %}Depósito — mBank{% endblock %}
+
+{% block content %}
+  <section class="mb-page-intro" style="padding-top:6px;">
+    <h2 class="mb-page-title-md">Depósito</h2>
+    <p class="mb-page-subtitle-md">Adicione saldo à sua conta mBank de forma rápida e segura.</p>
+  </section>
+
+  {% if open_accounts %}
+    <!-- Seletor de Método -->
+    <div class="mb-segment-bar" role="tablist">
+      <button type="button" class="mb-segment-btn active-dark" id="tab-pix" data-method="pix">
+        <img src="{% static 'mbank/assets/43daf.svg' %}" alt="" width="14" height="17">
+        <span>Pix (Instantâneo)</span>
+      </button>
+      <button type="button" class="mb-segment-btn" id="tab-boleto" data-method="boleto">
+        <img src="{% static 'mbank/assets/1403b.svg' %}" alt="" width="15" height="17">
+        <span>Boleto Bancário</span>
+      </button>
+    </div>
+
+    <!-- Card Principal de Depósito -->
+    <section class="mb-form-panel">
+      <div class="mb-glow-orb"></div>
+
+      <!-- Conta Destino -->
+      <div class="mb-dest-banner">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:34px;height:34px;border-radius:9999px;background:var(--bg-elevated-2);display:flex;align-items:center;justify-content:center;">
+            <img src="{% static 'mbank/assets/098c0.svg' %}" alt="" width="15" height="15">
+          </div>
+          <div>
+            <div style="font-size:13px;color:var(--text-secondary);">Destino</div>
+            {% if open_accounts|length > 1 %}
+              <select id="deposit-account-select" class="mb-origin-select" style="font-size:15px;font-weight:500;">
+                {% for acc in open_accounts %}
+                  <option value="{{ acc.id }}" data-iban="{{ acc.iban }}" {% if selected_account and acc.id == selected_account.id %}selected{% endif %}>
+                    Conta mBank • IBAN {{ acc.iban }} (Saldo: R$ {{ acc.available_balance|brl }})
+                  </option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <input type="hidden" id="deposit-account-select" value="{{ selected_account.id }}" data-iban="{{ selected_account.iban }}">
+              <div style="font-size:15px;font-weight:500;color:var(--text-heading);">
+                Conta Principal • Agência 0001 • IBAN {{ selected_account.iban }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        <span class="mb-dest-pill">{{ user_first_name }}</span>
+      </div>
+
+      <!-- Entrada de Valor -->
+      <div class="mb-field-group">
+        <label class="mb-field-label muted" for="deposit-amount">Quanto deseja depositar?</label>
+        <div class="mb-money-box-inline">
+          <span style="color:var(--text-secondary);font-size:16px;">R$</span>
+          <input type="text" id="deposit-amount" value="150,00" inputmode="decimal" placeholder="0,00">
+        </div>
+        <div class="mb-pills-row">
+          <span class="mb-pills-label">Sugestões:</span>
+          <button type="button" class="mb-pill-btn js-add-amount" data-add="50">+ R$ 50</button>
+          <button type="button" class="mb-pill-btn js-add-amount" data-add="100">+ R$ 100</button>
+          <button type="button" class="mb-pill-btn js-add-amount" data-add="200">+ R$ 200</button>
+        </div>
+      </div>
+
+      <!-- Botão Primário: Passo 1 (Gera QR Code / Boleto sem creditar ainda) -->
+      <button type="button" class="mb-btn-primary" id="deposit-generate-btn" style="width:100%;">
+        <img src="{% static 'mbank/assets/3238e.svg' %}" alt="" width="15" height="15">
+        <span id="deposit-btn-label">Gerar QR Code Pix</span>
+      </button>
+
+      <!-- Passo 2: QR Code & Pix Copia e Cola / Boleto (só aparece após gerar) -->
+      <div class="mb-qr-box" id="deposit-code-box" style="display:none;">
+        <div class="mb-qr-frame" id="deposit-qr-frame">
+          <img src="{% static 'mbank/assets/aa3e5.svg' %}" alt="QR Code Pix">
+        </div>
+        <div class="mb-qr-info">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div class="mb-qr-expiry">
+              <img src="{% static 'mbank/assets/624f9.svg' %}" alt="" width="12" height="14">
+              <span id="deposit-code-status">Expira em 30 minutos</span>
+            </div>
+            <span id="deposit-generated-amount" style="font-size:14px;font-weight:700;color:var(--text-heading);">R$ 0,00</span>
+          </div>
+          <p style="margin:0;font-size:14.5px;color:var(--text-secondary);line-height:1.45;" id="deposit-code-desc">
+            Escaneie o código acima no app do seu outro banco ou copie a linha de chave abaixo:
+          </p>
+          <div class="mb-copy-bar">
+            <span class="mb-copy-bar-text" id="deposit-copy-code"></span>
+            <button type="button" class="mb-copy-bar-btn" id="deposit-copy-btn">
+              <img src="{% static 'mbank/assets/e05df.svg' %}" alt="" width="12" height="14">
+              <span>Copiar</span>
+            </button>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:6px;">
+            <button type="button" class="mb-btn-primary" id="deposit-confirm-btn" style="padding:10px 20px;font-size:13.5px;">
+              <span>Confirmar pagamento</span>
+            </button>
+            <button type="button" class="mb-btn-secondary" id="deposit-cancel-btn" style="padding:10px 16px;font-size:13.5px;">
+              <span>Alterar valor</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Últimos Depósitos -->
+    <section class="mb-form-panel" style="padding:24px;gap:16px;">
+      <div class="mb-section-head">
+        <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text-heading);">Últimos Depósitos</h3>
+        <img src="{% static 'mbank/assets/e4303.svg' %}" alt="" width="15" height="15">
+      </div>
+
+      <div id="recent-deposits-list" style="display:flex;flex-direction:column;gap:8px;width:100%;">
+        {% if recent_deposits %}
+          {% for dep in recent_deposits %}
+            <div style="background:rgba(32,29,47,0.6);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:36px;height:36px;border-radius:9999px;background:rgba(0,165,116,0.3);display:flex;align-items:center;justify-content:center;">
+                  <img src="{% static 'mbank/assets/fd61a.svg' %}" alt="" width="12" height="12">
+                </div>
+                <div>
+                  <div style="font-size:15px;color:var(--text-heading);">Depósito Pix · {{ dep.iban }}</div>
+                  <div style="font-size:13.5px;color:var(--text-secondary);">{{ dep.when }}</div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:15px;color:var(--positive-emerald);font-weight:600;">+ R$ {{ dep.amount|brl }}</div>
+                <div style="font-size:13px;color:var(--positive-emerald);">Concluído</div>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="mb-empty-state" id="empty-deposits-msg">
+            Nenhum depósito realizado ainda. Informe um valor acima para adicionar saldo!
+          </div>
+        {% endif %}
+      </div>
+
+      <div style="width:100%;text-align:center;padding-top:4px;">
+        <a href="{% url 'bank:transactions_list' %}" style="display:inline-flex;align-items:center;gap:6px;color:var(--brand-lavender);font-size:14px;font-weight:500;">
+          <span>Ver histórico completo</span>
+          <img src="{% static 'mbank/assets/9ba39.svg' %}" alt="" width="7" height="11">
+        </a>
+      </div>
+    </section>
+  {% else %}
+    <div class="mb-card mb-empty-state">
+      Você precisa ter ao menos uma conta aberta para realizar depósitos.
+      <div style="margin-top:14px;">
+        <a href="{% url 'bank:accounts_list' %}?nova=1" class="mb-btn-primary">Abrir Conta</a>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    let activeMethod = 'pix';
+    let pendingCharge = null;
+
+    const amountInput = document.getElementById('deposit-amount');
+    const accountSel = document.getElementById('deposit-account-select');
+    const generateBtn = document.getElementById('deposit-generate-btn');
+    const btnLabel = document.getElementById('deposit-btn-label');
+    const codeBox = document.getElementById('deposit-code-box');
+    const qrFrame = document.getElementById('deposit-qr-frame');
+    const generatedAmountEl = document.getElementById('deposit-generated-amount');
+    const copyCodeEl = document.getElementById('deposit-copy-code');
+    const copyBtn = document.getElementById('deposit-copy-btn');
+    const confirmBtn = document.getElementById('deposit-confirm-btn');
+    const cancelBtn = document.getElementById('deposit-cancel-btn');
+    const statusEl = document.getElementById('deposit-code-status');
+    const descEl = document.getElementById('deposit-code-desc');
+    const listEl = document.getElementById('recent-deposits-list');
+
+    if (!generateBtn) return;
+
+    function getSelectedIban() {
+      if (accountSel.tagName === 'SELECT') {
+        const opt = accountSel.options[accountSel.selectedIndex];
+        return (opt && opt.getAttribute('data-iban')) || '';
+      }
+      return accountSel.getAttribute('data-iban') || '';
+    }
+
+    function resetPendingCharge() {
+      pendingCharge = null;
+      codeBox.style.display = 'none';
+      confirmBtn.style.display = '';
+      confirmBtn.disabled = false;
+      cancelBtn.textContent = 'Alterar valor';
+    }
+
+    document.querySelectorAll('[data-method]').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        activeMethod = tab.getAttribute('data-method');
+        document.querySelectorAll('[data-method]').forEach(function (t) {
+          t.classList.remove('active-dark');
+        });
+        tab.classList.add('active-dark');
+        btnLabel.textContent = activeMethod === 'pix' ? 'Gerar QR Code Pix' : 'Gerar Boleto Bancário';
+        resetPendingCharge();
+      });
+    });
+
+    document.querySelectorAll('.js-add-amount').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const add = Number(btn.getAttribute('data-add') || 0);
+        const cur = window.mBank.parseBRL(amountInput.value);
+        const next = (Number.isFinite(cur) && cur > 0 ? cur : 0) + add;
+        amountInput.value = window.mBank.formatBRL(next);
+        resetPendingCharge();
+      });
+    });
+
+    amountInput.addEventListener('input', resetPendingCharge);
+    if (accountSel.tagName === 'SELECT') {
+      accountSel.addEventListener('change', resetPendingCharge);
+    }
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        window.mBank.copyText(copyCodeEl.textContent.trim(), 'Código copiado!');
+      });
+    }
+
+    cancelBtn.addEventListener('click', function () {
+      resetPendingCharge();
+      amountInput.focus();
+    });
+
+    // Passo 1: Apenas gera o QR Code Pix ou linha digitável do Boleto (sem creditar)
+    generateBtn.addEventListener('click', function () {
+      const amount = window.mBank.parseBRL(amountInput.value);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        window.mBank.toast('Informe um valor positivo para depósito.', 'error');
+        return;
+      }
+
+      const accountId = accountSel.value;
+      const iban = getSelectedIban();
+      const centsStr = String(Math.round(amount * 100)).padStart(6, '0');
+      const refNum = String(Math.floor(100000 + Math.random() * 900000));
+      const code = activeMethod === 'pix'
+        ? '00020126580014br.gov.bcb.pix0136mbank-dep-' + iban + '-' + refNum + '5204000053039865406' + amount.toFixed(2)
+        : '23793.38128 60000.000003 00000.' + refNum + ' 1 96840000' + centsStr;
+
+      pendingCharge = {
+        accountId: accountId,
+        iban: iban,
+        amount: amount,
+        method: activeMethod,
+        requestKey: window.mBank.uuid4(),
+        code: code,
+        confirmed: false
+      };
+
+      qrFrame.style.display = activeMethod === 'pix' ? '' : 'none';
+      generatedAmountEl.textContent = 'Valor: R$ ' + window.mBank.formatBRL(amount);
+      copyCodeEl.textContent = code;
+      if (activeMethod === 'pix') {
+        statusEl.textContent = 'Aguardando pagamento · Expira em 30 minutos';
+        descEl.textContent = 'Escaneie o QR Code acima ou copie a chave Pix Copia e Cola. Após pagar, clique em Confirmar pagamento para creditar na conta:';
+      } else {
+        statusEl.textContent = 'Boleto gerado · Vencimento em 3 dias úteis';
+        descEl.textContent = 'Copie a linha digitável abaixo para pagamento ou clique em Confirmar pagamento para simular a compensação imediata:';
+      }
+      confirmBtn.style.display = '';
+      confirmBtn.disabled = false;
+      cancelBtn.textContent = 'Alterar valor';
+      codeBox.style.display = 'flex';
+      window.mBank.toast(activeMethod === 'pix' ? 'QR Code Pix gerado! Aguardando confirmação.' : 'Boleto gerado! Aguardando confirmação.');
+    });
+
+    // Passo 2: Efetiva o depósito no backend somente quando o usuário confirma o pagamento
+    confirmBtn.addEventListener('click', async function () {
+      if (!pendingCharge || pendingCharge.confirmed) return;
+      const charge = pendingCharge;
+      confirmBtn.disabled = true;
+      try {
+        const res = await window.mBank.apiFetch('/bank/api/accounts/' + charge.accountId + '/deposito/', {
+          method: 'POST',
+          body: {
+            amount: charge.amount.toFixed(2),
+            request_key: charge.requestKey
+          }
+        });
+        charge.confirmed = true;
+        statusEl.textContent = 'Pagamento confirmado · Creditado na conta!';
+        confirmBtn.style.display = 'none';
+        cancelBtn.textContent = 'Fazer novo depósito';
+        window.mBank.toast('Depósito de R$ ' + window.mBank.formatBRL(charge.amount) + ' creditado na conta!');
+
+        if (accountSel.tagName === 'SELECT' && res.account) {
+          const opt = accountSel.options[accountSel.selectedIndex];
+          if (opt) {
+            opt.textContent = 'Conta mBank • IBAN ' + res.account.iban + ' (Saldo: R$ ' + window.mBank.formatBRL(res.account.available_balance) + ')';
+          }
+        }
+
+        const emptyMsg = document.getElementById('empty-deposits-msg');
+        if (emptyMsg) emptyMsg.remove();
+
+        const row = document.createElement('div');
+        row.style.cssText = 'background:rgba(32,29,47,0.6);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;';
+        const methodName = charge.method === 'pix' ? 'Depósito Pix' : 'Depósito Boleto';
+        const iconUrl = charge.method === 'pix'
+          ? "{% static 'mbank/assets/fd61a.svg' %}"
+          : "{% static 'mbank/assets/be7c6.svg' %}";
+        const iconBg = charge.method === 'pix' ? 'rgba(0,165,116,0.3)' : 'rgba(145,126,255,0.2)';
+        row.innerHTML =
+          '<div style="display:flex;align-items:center;gap:12px;">' +
+            '<div style="width:36px;height:36px;border-radius:9999px;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;">' +
+              '<img src="' + iconUrl + '" alt="" width="13" height="13">' +
+            '</div>' +
+            '<div>' +
+              '<div style="font-size:15px;color:var(--text-heading);">' + methodName + ' · ' + res.account.iban + '</div>' +
+              '<div style="font-size:13.5px;color:var(--text-secondary);">Agora mesmo</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="text-align:right;">' +
+            '<div style="font-size:15px;color:var(--positive-emerald);font-weight:600;">+ R$ ' + window.mBank.formatBRL(charge.amount) + '</div>' +
+            '<div style="font-size:13px;color:var(--positive-emerald);">Concluído</div>' +
+          '</div>';
+        listEl.prepend(row);
+      } catch (err) {
+        confirmBtn.disabled = false;
+        window.mBank.toast(err.message, 'error');
+      }
+    });
+  })();
+</script>
+{% endblock %}

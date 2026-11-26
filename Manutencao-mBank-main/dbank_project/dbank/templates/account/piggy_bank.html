@@ -1,0 +1,661 @@
+{% extends "base.html" %}
+{% load static mbank_tags %}
+
+{% block title %}Cofrinho — mBank{% endblock %}
+
+{% block content %}
+  <section class="mb-page-intro-row">
+    <div class="mb-page-intro">
+      <h2 class="mb-page-title-lg">Cofrinho</h2>
+      <p class="mb-page-subtitle">Guarde dinheiro no seu ritmo e acompanhe seu rendimento diário sem taxas ou burocracia.</p>
+    </div>
+    {% if open_accounts|length > 1 %}
+      <div>
+        <select id="piggy-account-filter" class="mb-input" style="min-width:210px;">
+          <option value="">Todas as contas</option>
+          {% for acc in open_accounts %}
+            <option value="{{ acc.id }}">{{ acc.iban }} (Disp: R$ {{ acc.available_balance|brl }})</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Empty State Hero (shown when user has no active cofrinhos yet) -->
+  <section class="mb-piggy-empty-hero" id="piggy-hero-empty" {% if has_active_piggies %}style="display:none;"{% endif %}>
+    <div class="mb-piggy-empty-icon">
+      <img src="{% static 'mbank/assets/44e18.svg' %}" alt="" width="24" height="24">
+    </div>
+    <h3 class="mb-piggy-empty-title">Você ainda não criou nenhum cofrinho</h3>
+    <p class="mb-piggy-empty-desc" id="piggy-empty-policy">
+      Crie seu primeiro objetivo para guardar dinheiro com rendimento automático a 100% do CDI (isento de IOF após 30 dias).
+    </p>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:6px;">
+      <button type="button" class="mb-btn-primary" id="btn-empty-new-piggy" style="padding:12px 24px;font-size:14px;">
+        <img src="{% static 'mbank/assets/e79e9.svg' %}" alt="" width="17" height="17">
+        <span>Criar primeiro cofrinho</span>
+      </button>
+      <button type="button" class="mb-btn-secondary" id="btn-empty-history" style="display:none;">
+        <span>Ver histórico anterior</span>
+      </button>
+    </div>
+    <div class="mb-tip-banner" style="margin-top:14px;max-width:560px;text-align:left;">
+      <img src="{% static 'mbank/assets/e0d77.svg' %}" alt="" width="13" height="17">
+      <span>Dica: Guardar pequenas quantias todo mês acelera suas metas com o efeito dos juros diários.</span>
+    </div>
+  </section>
+
+  <!-- Main Balance Hero Card (shown only when at least 1 active cofrinho exists) -->
+  <section class="mb-piggy-hero" id="piggy-hero-active" {% if not has_active_piggies %}style="display:none;"{% endif %}>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:32px;height:32px;border-radius:8px;background:var(--bg-elevated-3);display:flex;align-items:center;justify-content:center;">
+          <img src="{% static 'mbank/assets/44e18.svg' %}" alt="" width="15" height="16">
+        </div>
+        <span style="font-size:14px;font-weight:500;color:var(--text-secondary);">Saldo total guardado</span>
+      </div>
+
+      <div class="mb-piggy-amount-row">
+        <span class="mb-piggy-total" id="piggy-total-saved">R$ 0,00</span>
+        <span class="mb-piggy-count-pill" id="piggy-active-count">0 cofrinhos ativos</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:4px;align-items:flex-start;">
+        <span class="mb-yield-pill">
+          <img src="{% static 'mbank/assets/e6b45.svg' %}" alt="" width="13" height="8">
+          <span id="piggy-monthly-yield">+R$ 0,00 este mês</span>
+        </span>
+        <span style="font-size:12px;color:var(--text-secondary);" id="piggy-yield-policy">
+          Rendimento automático a 100% do CDI (isento de IOF após 30 dias)
+        </span>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="mb-btn-primary" id="btn-open-deposit-piggy" style="padding:12px 22px;font-size:14px;">
+        <img src="{% static 'mbank/assets/e79e9.svg' %}" alt="" width="17" height="17">
+        <span>Guardar Dinheiro</span>
+      </button>
+      <button type="button" class="mb-btn-secondary" id="btn-open-withdraw-piggy">
+        <img src="{% static 'mbank/assets/eb4da.svg' %}" alt="" width="13" height="13">
+        <span>Resgatar</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Bento Grid: Left Goals (7 cols) & Right History (5 cols) -->
+  <section class="mb-bento-piggy" id="piggy-bento-active" {% if not has_active_piggies %}style="display:none;"{% endif %}>
+    <!-- Left Column -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="mb-section-head">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <img src="{% static 'mbank/assets/8558d.svg' %}" alt="" width="17" height="14">
+          <h3 class="mb-section-title-jakarta">Meus Objetivos</h3>
+        </div>
+        <button type="button" id="btn-open-new-piggy" style="background:var(--bg-elevated-2);border:none;border-radius:12px;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;color:var(--brand-lavender);font-size:11.5px;font-weight:600;">
+          <img src="{% static 'mbank/assets/725da.svg' %}" alt="" width="10" height="10">
+          <span>Novo Cofrinho</span>
+        </button>
+      </div>
+
+      <div class="mb-goals-grid" id="piggy-goals-grid">
+        <div class="mb-card mb-empty-state" style="grid-column:1/-1;">Carregando seus cofrinhos...</div>
+      </div>
+
+      <div class="mb-tip-banner">
+        <img src="{% static 'mbank/assets/e0d77.svg' %}" alt="" width="13" height="17">
+        <span>Dica: Guardar pequenas quantias todo mês acelera suas metas com o efeito dos juros diários.</span>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="mb-section-head">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <img src="{% static 'mbank/assets/3ca61.svg' %}" alt="" width="15" height="15">
+          <h3 class="mb-section-title-jakarta">Histórico Recente</h3>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:var(--text-subtle);">Últimos 30 dias</span>
+      </div>
+
+      <div class="mb-history-card" id="piggy-history-list">
+        <div class="mb-empty-state">Carregando movimentações...</div>
+      </div>
+
+      <button type="button" id="btn-open-full-history" style="background:transparent;border:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px;color:var(--brand-lavender);font-size:12px;font-weight:600;width:100%;">
+        <span>Ver extrato completo do cofrinho</span>
+        <img src="{% static 'mbank/assets/50c87.svg' %}" alt="" width="15" height="11">
+      </button>
+    </div>
+  </section>
+
+  <!-- Modal: Novo Cofrinho -->
+  <div class="mb-modal-backdrop" id="modal-new-piggy">
+    <div class="mb-modal">
+      <div class="mb-modal-header">
+        <h3 class="mb-modal-title">Novo Cofrinho</h3>
+        <button type="button" class="mb-modal-close" data-close-modal="modal-new-piggy">&times;</button>
+      </div>
+      <form id="form-new-piggy" style="display:flex;flex-direction:column;gap:14px;">
+        {% if open_accounts|length > 1 %}
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="np-account">Conta vinculada</label>
+            <select id="np-account" class="mb-input" required>
+              {% for acc in open_accounts %}
+                <option value="{{ acc.id }}">{{ acc.iban }} (Disponível: R$ {{ acc.available_balance|brl }})</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% elif default_account %}
+          <input type="hidden" id="np-account" value="{{ default_account.id }}">
+        {% endif %}
+
+        <div class="mb-field-group">
+          <label class="mb-field-label" for="np-name">Nome do objetivo *</label>
+          <input type="text" id="np-name" class="mb-input" maxlength="60" placeholder="Ex: Reserva de Emergência" required>
+        </div>
+
+        <div class="mb-reg-row-2">
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="np-category">Categoria</label>
+            <select id="np-category" class="mb-input">
+              <option value="Prioridade">Prioridade</option>
+              <option value="Lazer">Lazer</option>
+              <option value="Reserva">Reserva</option>
+              <option value="Viagem">Viagem</option>
+              <option value="Educação">Educação</option>
+              <option value="Geral">Geral</option>
+            </select>
+          </div>
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="np-icon">Ícone</label>
+            <select id="np-icon" class="mb-input">
+              <option value="shield">Escudo (Segurança)</option>
+              <option value="plane">Avião (Viagem)</option>
+              <option value="piggy">Cofrinho (Geral)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-field-group">
+          <label class="mb-field-label" for="np-goal">Meta (opcional, em R$)</label>
+          <input type="text" id="np-goal" class="mb-input" placeholder="Ex: 1.250,00" inputmode="decimal">
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:4px;">
+          <button type="button" class="mb-btn-secondary" data-close-modal="modal-new-piggy">Cancelar</button>
+          <button type="submit" class="mb-btn-primary" id="np-submit">Criar cofrinho</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Guardar / Resgatar -->
+  <div class="mb-modal-backdrop" id="modal-move-piggy">
+    <div class="mb-modal">
+      <div class="mb-modal-header">
+        <h3 class="mb-modal-title" id="mp-title">Guardar Dinheiro</h3>
+        <button type="button" class="mb-modal-close" data-close-modal="modal-move-piggy">&times;</button>
+      </div>
+      <p class="mb-page-subtitle" id="mp-balance-hint"></p>
+      <form id="form-move-piggy" style="display:flex;flex-direction:column;gap:14px;">
+        <input type="hidden" id="mp-action" value="guardar">
+        <div class="mb-field-group">
+          <label class="mb-field-label" for="mp-piggy-select">Cofrinho</label>
+          <select id="mp-piggy-select" class="mb-input" required></select>
+        </div>
+        <div class="mb-field-group">
+          <label class="mb-field-label" for="mp-amount">Valor (R$)</label>
+          <input type="text" id="mp-amount" class="mb-input" placeholder="100,00" inputmode="decimal" required>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:4px;">
+          <button type="button" class="mb-btn-secondary" data-close-modal="modal-move-piggy">Cancelar</button>
+          <button type="submit" class="mb-btn-primary" id="mp-submit">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Detalhes e Edição do Cofrinho -->
+  <div class="mb-modal-backdrop" id="modal-detail-piggy">
+    <div class="mb-modal">
+      <div class="mb-modal-header">
+        <h3 class="mb-modal-title" id="dp-title">Detalhes do Cofrinho</h3>
+        <button type="button" class="mb-modal-close" data-close-modal="modal-detail-piggy">&times;</button>
+      </div>
+      <div style="background:var(--bg-elevated);border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:11px;text-transform:uppercase;color:var(--text-subtle);">Saldo guardado</div>
+          <div id="dp-balance" style="font-size:24px;font-weight:800;color:var(--text-heading);">R$ 0,00</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;text-transform:uppercase;color:var(--text-subtle);">Rendimento total</div>
+          <div id="dp-yield" style="font-size:16px;font-weight:700;color:var(--positive-emerald);">+ R$ 0,00</div>
+        </div>
+      </div>
+
+      <form id="form-edit-piggy" style="display:flex;flex-direction:column;gap:12px;">
+        <input type="hidden" id="dp-id">
+        <div class="mb-field-group">
+          <label class="mb-field-label" for="dp-name">Nome</label>
+          <input type="text" id="dp-name" class="mb-input" maxlength="60" required>
+        </div>
+        <div class="mb-reg-row-2">
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="dp-category">Categoria</label>
+            <input type="text" id="dp-category" class="mb-input" maxlength="30">
+          </div>
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="dp-goal">Meta (R$)</label>
+            <input type="text" id="dp-goal" class="mb-input" placeholder="Opcional" inputmode="decimal">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:6px;flex-wrap:wrap;">
+          <button type="button" class="mb-btn-secondary" id="dp-archive-btn" style="color:var(--negative-coral);">Arquivar</button>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="mb-btn-secondary" id="dp-quick-deposit">+ Guardar</button>
+            <button type="submit" class="mb-btn-primary" id="dp-save-btn">Salvar alterações</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Extrato Completo do Cofrinho -->
+  <div class="mb-modal-backdrop" id="modal-full-history">
+    <div class="mb-modal wide">
+      <div class="mb-modal-header">
+        <h3 class="mb-modal-title">Extrato completo do cofrinho</h3>
+        <button type="button" class="mb-modal-close" data-close-modal="modal-full-history">&times;</button>
+      </div>
+      <div class="mb-filter-bar" id="fh-filters">
+        <button type="button" class="mb-filter-pill active" data-fh-type="">Todos</button>
+        <button type="button" class="mb-filter-pill" data-fh-type="DEPOSIT">Depósitos</button>
+        <button type="button" class="mb-filter-pill" data-fh-type="WITHDRAW">Resgates</button>
+        <button type="button" class="mb-filter-pill" data-fh-type="YIELD">Rendimentos</button>
+      </div>
+      <div id="fh-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const ASSETS = {
+      shield: "{% static 'mbank/assets/ad4e2.svg' %}",
+      plane: "{% static 'mbank/assets/7ff55.svg' %}",
+      piggy: "{% static 'mbank/assets/44e18.svg' %}",
+      check: "{% static 'mbank/assets/15329.svg' %}",
+      chevron: "{% static 'mbank/assets/6eae5.svg' %}",
+      dep: "{% static 'mbank/assets/ab0e1.svg' %}",
+      wit: "{% static 'mbank/assets/53d0c.svg' %}",
+      yld: "{% static 'mbank/assets/6eb0f.svg' %}"
+    };
+
+    const PT_MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    let state = { objectives: [], available_balance: '0.00', accountId: '' };
+
+    function fmtDateDMY(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '';
+      return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    }
+
+    function fmtDayMonth(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '';
+      return String(d.getDate()).padStart(2, '0') + ' de ' + PT_MONTHS[d.getMonth()];
+    }
+
+    function iconForGoal(obj) {
+      const key = (obj.icon || '').toLowerCase();
+      if (key === 'plane' || (obj.category || '').toLowerCase() === 'lazer' || (obj.category || '').toLowerCase() === 'viagem') {
+        return ASSETS.plane;
+      }
+      if (key === 'shield' || (obj.category || '').toLowerCase() === 'prioridade' || (obj.category || '').toLowerCase() === 'reserva') {
+        return ASSETS.shield;
+      }
+      return ASSETS.piggy;
+    }
+
+    function renderHistoryRow(row, objectiveMap) {
+      const type = row.movement_type;
+      const obj = objectiveMap[row.piggy_bank_id];
+      const objName = obj ? obj.name.split(' ')[0] : 'Cofrinho';
+      const when = fmtDayMonth(row.created_at);
+      let circleClass = 'deposit';
+      let icon = ASSETS.dep;
+      let title = 'Depósito no cofrinho';
+      let sub = when + ' · ' + objName;
+      let amountStr = '+ R$ ' + window.mBank.formatBRL(row.amount);
+      let amountColor = 'var(--positive-emerald)';
+      let statusLabel = 'Concluído';
+
+      if (type === 'WITHDRAW') {
+        circleClass = 'withdraw';
+        icon = ASSETS.wit;
+        title = 'Resgate para conta';
+        amountStr = '- R$ ' + window.mBank.formatBRL(row.amount);
+        amountColor = 'var(--negative-coral)';
+        statusLabel = 'Saldo liberado';
+      } else if (type === 'YIELD') {
+        circleClass = 'yield';
+        icon = ASSETS.yld;
+        title = 'Rendimento diário';
+        sub = when + ' · 100% CDI';
+        statusLabel = 'Automático';
+      }
+
+      return (
+        '<div class="mb-history-row">' +
+          '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<div class="mb-history-circle ' + circleClass + '">' +
+              '<img src="' + icon + '" alt="" width="13" height="13">' +
+            '</div>' +
+            '<div>' +
+              '<div style="font-size:14px;font-weight:600;color:var(--text-heading);">' + title + '</div>' +
+              '<div style="font-size:12px;color:var(--text-secondary);">' + sub + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="text-align:right;">' +
+            '<div style="font-size:14px;font-weight:700;color:' + amountColor + ';">' + amountStr + '</div>' +
+            '<div style="font-size:11px;font-weight:600;color:var(--text-subtle);">' + statusLabel + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    async function loadDashboard() {
+      const query = state.accountId ? ('?account_id=' + encodeURIComponent(state.accountId)) : '';
+      try {
+        const data = await window.mBank.apiFetch('/bank/api/cofrinhos/dashboard/' + query);
+        state.objectives = data.objectives || [];
+        state.available_balance = data.available_balance || '0.00';
+
+        document.getElementById('piggy-total-saved').textContent = 'R$ ' + window.mBank.formatBRL(data.total_saved);
+        const cnt = data.active_count || 0;
+        document.getElementById('piggy-active-count').textContent = cnt + (cnt === 1 ? ' cofrinho ativo' : ' cofrinhos ativos');
+        document.getElementById('piggy-monthly-yield').textContent = '+R$ ' + window.mBank.formatBRL(data.monthly_yield_total) + ' este mês';
+
+        if (data.yield_policy && data.yield_policy.cdi_percentage) {
+          const pct = parseFloat(data.yield_policy.cdi_percentage);
+          const policyText = 'Rendimento automático a ' + pct.toFixed(0) + '% do CDI (isento de IOF após 30 dias)';
+          document.getElementById('piggy-yield-policy').textContent = policyText;
+          document.getElementById('piggy-empty-policy').textContent =
+            'Crie seu primeiro objetivo para guardar dinheiro com rendimento automático a ' + pct.toFixed(0) + '% do CDI (isento de IOF após 30 dias).';
+        }
+
+        const hasPiggies = state.objectives.length > 0;
+        const rows = data.recent_history || [];
+        document.getElementById('piggy-hero-empty').style.display = hasPiggies ? 'none' : 'flex';
+        document.getElementById('piggy-hero-active').style.display = hasPiggies ? '' : 'none';
+        document.getElementById('piggy-bento-active').style.display = hasPiggies ? '' : 'none';
+        document.getElementById('btn-empty-history').style.display = (!hasPiggies && rows.length > 0) ? 'inline-flex' : 'none';
+
+        const withdrawBtn = document.getElementById('btn-open-withdraw-piggy');
+        const hasSavedBalance = parseFloat(data.total_saved || '0') > 0;
+        withdrawBtn.disabled = !hasSavedBalance;
+        withdrawBtn.title = hasSavedBalance ? '' : 'Guarde dinheiro primeiro para resgatar';
+
+        const grid = document.getElementById('piggy-goals-grid');
+        if (!hasPiggies) {
+          grid.innerHTML = '';
+        } else {
+          grid.innerHTML = state.objectives.map(function (obj, idx) {
+            const isPriority = (obj.category || '').toLowerCase() === 'prioridade';
+            const pct = obj.progress_percent != null ? Math.min(100, Math.round(obj.progress_percent)) : null;
+            const barClass = (idx % 2 === 0 || isPriority) ? '' : 'lavender';
+            const pctColor = (idx % 2 === 0 || isPriority) ? 'var(--positive-emerald)' : 'var(--brand-lavender)';
+            const goalHtml = obj.goal_amount
+              ? '<div class="mb-progress-track"><div class="mb-progress-fill ' + barClass + '" style="width:' + pct + '%;"></div></div>' +
+                '<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;font-weight:600;">' +
+                  '<span style="color:var(--text-secondary);">Meta: R$ ' + window.mBank.formatBRL(obj.goal_amount) + '</span>' +
+                  '<span style="color:' + pctColor + ';">' + pct + '%</span>' +
+                '</div>'
+              : '<div style="font-size:11px;color:var(--text-subtle);margin-top:6px;">Sem meta definida</div>';
+
+            return (
+              '<article class="mb-goal-card">' +
+                '<div style="display:flex;flex-direction:column;gap:14px;">' +
+                  '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+                    '<div class="mb-goal-icon-box"><img src="' + iconForGoal(obj) + '" alt="" width="18" height="18"></div>' +
+                    '<span class="mb-goal-cat-pill ' + (isPriority ? '' : 'neutral') + '">' + (obj.category || 'Geral') + '</span>' +
+                  '</div>' +
+                  '<div>' +
+                    '<h4 style="margin:0;font-size:18px;font-weight:700;color:var(--text-heading);">' + obj.name + '</h4>' +
+                    '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Iniciado em ' + fmtDateDMY(obj.created_at) + '</div>' +
+                  '</div>' +
+                  '<div style="padding-top:4px;">' +
+                    '<div style="font-size:11px;font-weight:600;text-transform:uppercase;color:#6b687c;">SALDO ATUAL</div>' +
+                    '<div style="font-size:22px;font-weight:800;color:var(--text-heading);letter-spacing:-0.5px;">R$ ' + window.mBank.formatBRL(obj.current_balance) + '</div>' +
+                    goalHtml +
+                  '</div>' +
+                '</div>' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(62,42,131,0.35);">' +
+                  '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-secondary);">' +
+                    '<img src="' + ASSETS.check + '" alt="" width="12" height="12">' +
+                    '<span>Rendendo diário</span>' +
+                  '</span>' +
+                  '<button type="button" class="js-open-detail" data-id="' + obj.id + '" style="background:transparent;border:none;display:inline-flex;align-items:center;gap:4px;color:var(--brand-lavender);font-size:11.5px;font-weight:600;">' +
+                    '<span>Detalhes</span>' +
+                    '<img src="' + ASSETS.chevron + '" alt="" width="5" height="8">' +
+                  '</button>' +
+                '</div>' +
+              '</article>'
+            );
+          }).join('');
+        }
+
+        const objectiveMap = {};
+        state.objectives.forEach(function (o) { objectiveMap[o.id] = o; });
+        const histEl = document.getElementById('piggy-history-list');
+        if (!rows.length) {
+          histEl.innerHTML = '<div class="mb-empty-state">Nenhuma movimentação nos últimos 30 dias.</div>';
+        } else {
+          histEl.innerHTML = rows.slice(0, 6).map(function (r, idx) {
+            const divider = idx > 0 && r.movement_type === 'YIELD' ? '<div class="mb-history-divider"></div>' : '';
+            return divider + renderHistoryRow(r, objectiveMap);
+          }).join('');
+        }
+      } catch (err) {
+        window.mBank.toast(err.message, 'error');
+      }
+    }
+
+    const filterSel = document.getElementById('piggy-account-filter');
+    if (filterSel) {
+      filterSel.addEventListener('change', function () {
+        state.accountId = filterSel.value;
+        loadDashboard();
+      });
+    }
+
+    // Open New Piggy
+    function openNewPiggyModal() {
+      document.getElementById('form-new-piggy').reset();
+      window.mBank.openModal('modal-new-piggy');
+    }
+    document.getElementById('btn-open-new-piggy').addEventListener('click', openNewPiggyModal);
+    document.getElementById('btn-empty-new-piggy').addEventListener('click', openNewPiggyModal);
+    document.getElementById('btn-empty-history').addEventListener('click', function () {
+      window.mBank.openModal('modal-full-history');
+      loadFullHistory('');
+    });
+
+    document.getElementById('form-new-piggy').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('np-submit');
+      const payload = {
+        name: document.getElementById('np-name').value.trim(),
+        category: document.getElementById('np-category').value,
+        icon: document.getElementById('np-icon').value
+      };
+      const accEl = document.getElementById('np-account');
+      if (accEl && accEl.value) payload.account_id = Number(accEl.value);
+      const goalVal = window.mBank.parseBRL(document.getElementById('np-goal').value);
+      if (Number.isFinite(goalVal) && goalVal > 0) payload.goal_amount = goalVal.toFixed(2);
+
+      btn.disabled = true;
+      try {
+        await window.mBank.apiFetch('/bank/api/cofrinhos/', { method: 'POST', body: payload });
+        window.mBank.closeModal('modal-new-piggy');
+        window.mBank.toast('Cofrinho criado com sucesso!');
+        await loadDashboard();
+      } catch (err) {
+        window.mBank.toast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Open Move Modal (Guardar / Resgatar)
+    function openMoveModal(action, preselectId) {
+      if (!state.objectives.length) {
+        window.mBank.toast('Crie um cofrinho primeiro para movimentar valores.', 'error');
+        return;
+      }
+      document.getElementById('mp-action').value = action;
+      document.getElementById('mp-title').textContent = action === 'guardar' ? 'Guardar Dinheiro' : 'Resgatar para Conta';
+      document.getElementById('mp-balance-hint').textContent = action === 'guardar'
+        ? 'Saldo disponível na conta para guardar: R$ ' + window.mBank.formatBRL(state.available_balance)
+        : 'O valor resgatado volta imediatamente para o saldo disponível da conta.';
+
+      const sel = document.getElementById('mp-piggy-select');
+      sel.innerHTML = state.objectives.map(function (o) {
+        return '<option value="' + o.id + '">' + o.name + ' (Saldo: R$ ' + window.mBank.formatBRL(o.current_balance) + ')</option>';
+      }).join('');
+      if (preselectId) sel.value = String(preselectId);
+      document.getElementById('mp-amount').value = '';
+      window.mBank.openModal('modal-move-piggy');
+    }
+
+    document.getElementById('btn-open-deposit-piggy').addEventListener('click', function () { openMoveModal('guardar'); });
+    document.getElementById('btn-open-withdraw-piggy').addEventListener('click', function () { openMoveModal('resgatar'); });
+
+    document.getElementById('form-move-piggy').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const action = document.getElementById('mp-action').value;
+      const id = document.getElementById('mp-piggy-select').value;
+      const amount = window.mBank.parseBRL(document.getElementById('mp-amount').value);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        window.mBank.toast('Informe um valor positivo.', 'error');
+        return;
+      }
+      const btn = document.getElementById('mp-submit');
+      btn.disabled = true;
+      try {
+        await window.mBank.apiFetch('/bank/api/cofrinhos/' + id + '/' + action + '/', {
+          method: 'POST',
+          body: { amount: amount.toFixed(2), idempotency_key: window.mBank.uuid4() }
+        });
+        window.mBank.closeModal('modal-move-piggy');
+        window.mBank.toast(action === 'guardar' ? 'Valor guardado no cofrinho!' : 'Resgate concluído com sucesso!');
+        await loadDashboard();
+      } catch (err) {
+        window.mBank.toast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Detail Modal
+    document.addEventListener('click', async function (e) {
+      const btn = e.target.closest('.js-open-detail');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      try {
+        const detail = await window.mBank.apiFetch('/bank/api/cofrinhos/' + id + '/');
+        document.getElementById('dp-id').value = detail.id;
+        document.getElementById('dp-title').textContent = detail.name;
+        document.getElementById('dp-balance').textContent = 'R$ ' + window.mBank.formatBRL(detail.current_balance);
+        document.getElementById('dp-yield').textContent = '+ R$ ' + window.mBank.formatBRL(detail.total_yield);
+        document.getElementById('dp-name').value = detail.name;
+        document.getElementById('dp-category').value = detail.category || '';
+        document.getElementById('dp-goal').value = detail.goal_amount ? window.mBank.formatBRL(detail.goal_amount) : '';
+        window.mBank.openModal('modal-detail-piggy');
+      } catch (err) {
+        window.mBank.toast(err.message, 'error');
+      }
+    });
+
+    document.getElementById('dp-quick-deposit').addEventListener('click', function () {
+      const id = document.getElementById('dp-id').value;
+      window.mBank.closeModal('modal-detail-piggy');
+      openMoveModal('guardar', id);
+    });
+
+    document.getElementById('form-edit-piggy').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const id = document.getElementById('dp-id').value;
+      const goalRaw = document.getElementById('dp-goal').value.trim();
+      const payload = {
+        name: document.getElementById('dp-name').value.trim(),
+        category: document.getElementById('dp-category').value.trim() || 'Geral',
+        goal_amount: goalRaw ? window.mBank.parseBRL(goalRaw).toFixed(2) : null
+      };
+      try {
+        await window.mBank.apiFetch('/bank/api/cofrinhos/' + id + '/', { method: 'PATCH', body: payload });
+        window.mBank.closeModal('modal-detail-piggy');
+        window.mBank.toast('Cofrinho atualizado!');
+        await loadDashboard();
+      } catch (err) {
+        window.mBank.toast(err.message, 'error');
+      }
+    });
+
+    document.getElementById('dp-archive-btn').addEventListener('click', async function () {
+      const id = document.getElementById('dp-id').value;
+      if (!window.confirm('Deseja arquivar este cofrinho? Ele precisa estar com saldo zerado.')) return;
+      try {
+        await window.mBank.apiFetch('/bank/api/cofrinhos/' + id + '/arquivar/', { method: 'POST' });
+        window.mBank.closeModal('modal-detail-piggy');
+        window.mBank.toast('Cofrinho arquivado.');
+        await loadDashboard();
+      } catch (err) {
+        window.mBank.toast(err.message, 'error');
+      }
+    });
+
+    // Full History Modal
+    async function loadFullHistory(typeFilter) {
+      const params = new URLSearchParams();
+      if (state.accountId) params.set('account_id', state.accountId);
+      if (typeFilter) params.set('type', typeFilter);
+      const list = document.getElementById('fh-list');
+      list.innerHTML = '<div class="mb-empty-state">Carregando extrato...</div>';
+      try {
+        const data = await window.mBank.apiFetch('/bank/api/cofrinhos/extrato/?' + params.toString());
+        const objectiveMap = {};
+        state.objectives.forEach(function (o) { objectiveMap[o.id] = o; });
+        const rows = data.results || [];
+        if (!rows.length) {
+          list.innerHTML = '<div class="mb-empty-state">Nenhuma movimentação encontrada.</div>';
+        } else {
+          list.innerHTML = rows.map(function (r) { return renderHistoryRow(r, objectiveMap); }).join('');
+        }
+      } catch (err) {
+        list.innerHTML = '<div class="mb-empty-state">' + err.message + '</div>';
+      }
+    }
+
+    document.getElementById('btn-open-full-history').addEventListener('click', function () {
+      window.mBank.openModal('modal-full-history');
+      loadFullHistory('');
+    });
+
+    document.querySelectorAll('[data-fh-type]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('[data-fh-type]').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        loadFullHistory(btn.getAttribute('data-fh-type'));
+      });
+    });
+
+    loadDashboard();
+  })();
+</script>
+{% endblock %}

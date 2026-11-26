@@ -1,0 +1,300 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load static mbank_tags %}
+
+{% block title %}Clientes &amp; Contas — Painel Administrativo mBank{% endblock %}
+
+{% block content %}
+  <section class="mb-page-intro-row">
+    <div class="mb-page-intro">
+      <h1 class="mb-page-title-lg">Clientes &amp; Contas</h1>
+      <p class="mb-page-subtitle">Consulte, cadastre e gerencie clientes e contas bancárias.</p>
+    </div>
+    <button type="button" class="mb-btn-primary" id="btn-open-new-client" style="padding:10px 18px;font-size:13.5px;">
+      <img src="{% static 'mbank/assets/725da.svg' %}" alt="" width="12" height="12">
+      <span>Novo Cliente</span>
+    </button>
+  </section>
+
+  <!-- Search Bar -->
+  <form method="get" action="{% url 'admin_clients' %}" class="mba-filter-card">
+    <div class="mba-search-wrap">
+      <img src="{% static 'mbank/assets/38489.svg' %}" alt="" width="15" height="15">
+      <input type="text" name="q" value="{{ query }}" placeholder="Buscar por nome ou CPF...">
+    </div>
+    <button type="submit" class="mba-btn-analyze" style="height:40px;padding:0 20px;font-size:13px;">Buscar</button>
+    {% if query %}
+      <a href="{% url 'admin_clients' %}" class="mb-btn-secondary" style="height:40px;padding:0 14px;font-size:13px;">Limpar</a>
+    {% endif %}
+  </form>
+
+  <!-- Table -->
+  <section class="mba-table-card">
+    <div class="mba-table-wrap">
+      <table class="mba-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>CPF / Doc</th>
+            <th>Tipo</th>
+            <th>IBAN</th>
+            <th style="text-align:right;">Saldo</th>
+            <th style="text-align:center;">Status</th>
+            <th style="text-align:right;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td style="font-weight:600;">{{ row.name }}</td>
+              <td style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-secondary);">{{ row.doc }}</td>
+              <td style="color:var(--text-secondary);">{{ row.account_type }}</td>
+              <td style="font-family:var(--font-mono);font-size:12.5px;">
+                {{ row.primary_iban }}
+                {% if row.accounts_count > 1 %}
+                  <span style="font-size:11px;color:var(--brand-lavender);">+{{ row.accounts_count|add:"-1" }}</span>
+                {% endif %}
+              </td>
+              <td style="text-align:right;font-weight:600;">R$ {{ row.total_balance|brl }}</td>
+              <td style="text-align:center;">
+                <span class="mba-status-chip {{ row.status_tone }}">
+                  <span class="dot"></span>
+                  <span>{{ row.status_label }}</span>
+                </span>
+              </td>
+              <td style="text-align:right;">
+                <button
+                  type="button"
+                  class="mba-btn-analyze js-client-detail"
+                  style="background:var(--bg-elevated-2);color:var(--brand-lavender);padding:5px 12px;"
+                  data-id="{{ row.client.id }}"
+                  data-name="{{ row.name }}"
+                  data-doc="{{ row.doc }}"
+                  data-email="{{ row.client.email }}"
+                  data-phone="{{ row.client.phone_number }}"
+                  data-active="{% if row.client.is_active %}1{% else %}0{% endif %}"
+                  data-limit="{{ row.preapproved_limit }}"
+                  data-accounts="{{ row.accounts_json }}"
+                >
+                  Ver detalhes
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="mb-empty-state">Nenhum cliente encontrado.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mba-table-footer">
+      <span>Mostrando {{ rows|length }} de {{ total_records }} clientes</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}" class="mb-btn-secondary" style="padding:5px 12px;font-size:12px;">Anterior</a>
+        {% endif %}
+        <span style="padding:0 6px;font-weight:600;color:var(--text-heading);">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}" class="mb-btn-secondary" style="padding:5px 12px;font-size:12px;">Próxima</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal: Novo Cliente -->
+  <div class="mb-modal-backdrop" id="modal-new-client">
+    <div class="mb-modal">
+      <div class="mb-modal-header">
+        <h3 class="mb-modal-title">Cadastrar Novo Cliente</h3>
+        <button type="button" class="mb-modal-close" data-close-modal="modal-new-client">&times;</button>
+      </div>
+      <form id="form-new-client" style="display:flex;flex-direction:column;gap:12px;">
+        <div class="mb-field-group">
+          <label class="mb-field-label" for="nc-name">Nome completo *</label>
+          <input type="text" id="nc-name" class="mb-input" required>
+        </div>
+        <div class="mb-reg-row-2">
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="nc-cpf">CPF ou Usuário *</label>
+            <input type="text" id="nc-cpf" class="mb-input" placeholder="000.000.000-00" required>
+          </div>
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="nc-type">Tipo de conta</label>
+            <select id="nc-type" class="mb-input">
+              <option value="Corrente">Corrente</option>
+              <option value="Poupança">Poupança</option>
+              <option value="PJ">PJ</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-reg-row-2">
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="nc-email">E-mail</label>
+            <input type="email" id="nc-email" class="mb-input" placeholder="cliente@mbank.local">
+          </div>
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="nc-phone">Celular</label>
+            <input type="text" id="nc-phone" class="mb-input" placeholder="(11) 99999-0000">
+          </div>
+        </div>
+        <div class="mb-reg-row-2">
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="nc-status">Situação inicial</label>
+            <select id="nc-status" class="mb-input">
+              <option value="APPROVED">Aprovado (ativa imediato)</option>
+              <option value="PENDING">Pendente (fila de aprovações)</option>
+            </select>
+          </div>
+          <div class="mb-field-group">
+            <label class="mb-field-label" for="nc-pass">Senha inicial</label>
+            <input type="text" id="nc-pass" class="mb-input" value="mbank1234">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:6px;">
+          <button type="button" class="mb-btn-secondary" data-close-modal="modal-new-client">Cancelar</button>
+          <button type="submit" class="mb-btn-primary" id="nc-submit">Cadastrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Detalhes do Cliente -->
+  <div class="mb-modal-backdrop" id="modal-client-detail">
+    <div class="mb-modal wide">
+      <div class="mb-modal-header">
+        <h3 class="mb-modal-title" id="cd-name">Detalhes do Cliente</h3>
+        <button type="button" class="mb-modal-close" data-close-modal="modal-client-detail">&times;</button>
+      </div>
+      <input type="hidden" id="cd-id">
+      <div class="mba-info-grid" style="font-size:13.5px;">
+        <div><div style="font-size:11px;color:var(--text-subtle);">CPF / Usuário</div><strong id="cd-doc"></strong></div>
+        <div><div style="font-size:11px;color:var(--text-subtle);">E-mail</div><strong id="cd-email"></strong></div>
+        <div><div style="font-size:11px;color:var(--text-subtle);">Celular</div><strong id="cd-phone"></strong></div>
+        <div>
+          <div style="font-size:11px;color:var(--text-subtle);margin-bottom:4px;">Limite Pré-aprovado (R$)</div>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="cd-limit" class="mb-input" style="padding:6px 10px;">
+            <button type="button" id="cd-save-limit" class="mba-btn-analyze">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="mb-section-head" style="margin-bottom:10px;">
+          <strong style="font-size:14px;color:var(--text-heading);">Contas vinculadas</strong>
+          <button type="button" id="cd-open-account" class="mba-btn-analyze" style="background:var(--bg-elevated-2);color:var(--brand-lavender);">+ Abrir nova conta</button>
+        </div>
+        <div id="cd-accounts-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border-line);">
+        <button type="button" id="cd-toggle-active" class="mb-btn-secondary" style="color:var(--negative-coral);">Bloquear / Ativar</button>
+        <button type="button" class="mb-btn-primary" data-close-modal="modal-client-detail">Fechar</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    document.getElementById('btn-open-new-client').addEventListener('click', function () {
+      document.getElementById('form-new-client').reset();
+      window.mBank.openModal('modal-new-client');
+    });
+
+    document.getElementById('form-new-client').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('nc-submit');
+      btn.disabled = true;
+      try {
+        await window.mBank.apiFetch('/painel-admin/api/clientes/', {
+          method: 'POST',
+          body: {
+            name: document.getElementById('nc-name').value.trim(),
+            cpf: document.getElementById('nc-cpf').value.trim(),
+            account_type: document.getElementById('nc-type').value,
+            email: document.getElementById('nc-email').value.trim(),
+            phone_number: document.getElementById('nc-phone').value.trim(),
+            approval_status: document.getElementById('nc-status').value,
+            password: document.getElementById('nc-pass').value
+          }
+        });
+        window.mBank.toast('Cliente cadastrado com sucesso!');
+        window.location.reload();
+      } catch (err) {
+        window.mBank.toast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.querySelectorAll('.js-client-detail').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const id = btn.getAttribute('data-id');
+        const active = btn.getAttribute('data-active') === '1';
+        const accounts = JSON.parse(btn.getAttribute('data-accounts') || '[]');
+        document.getElementById('cd-id').value = id;
+        document.getElementById('cd-name').textContent = btn.getAttribute('data-name');
+        document.getElementById('cd-doc').textContent = btn.getAttribute('data-doc');
+        document.getElementById('cd-email').textContent = btn.getAttribute('data-email') || '—';
+        document.getElementById('cd-phone').textContent = btn.getAttribute('data-phone') || '—';
+        document.getElementById('cd-limit').value = window.mBank.formatBRL(btn.getAttribute('data-limit'));
+
+        const toggleBtn = document.getElementById('cd-toggle-active');
+        toggleBtn.textContent = active ? 'Bloquear acesso do cliente' : 'Reativar acesso do cliente';
+        toggleBtn.style.color = active ? 'var(--negative-coral)' : 'var(--positive-emerald)';
+
+        const list = document.getElementById('cd-accounts-list');
+        if (!accounts.length) {
+          list.innerHTML = '<div class="mb-empty-state" style="padding:14px;">Nenhuma conta aberta.</div>';
+        } else {
+          list.innerHTML = accounts.map(function (a) {
+            return (
+              '<div class="mba-list-row" style="padding:12px 14px;">' +
+                '<div>' +
+                  '<strong style="font-family:var(--font-mono);">' + a.iban + '</strong>' +
+                  '<div style="font-size:12px;color:var(--text-secondary);">Disponível: R$ ' + window.mBank.formatBRL(a.available) + ' · Reservado: R$ ' + window.mBank.formatBRL(a.reserved) + '</div>' +
+                '</div>' +
+                '<div style="text-align:right;">' +
+                  '<div style="font-weight:700;">R$ ' + window.mBank.formatBRL(a.balance) + '</div>' +
+                  '<span class="mba-status-chip ' + (a.is_open ? 'active' : 'closed') + '">' + (a.is_open ? 'Aberta' : 'Encerrada') + '</span>' +
+                '</div>' +
+              '</div>'
+            );
+          }).join('');
+        }
+        window.mBank.openModal('modal-client-detail');
+      });
+    });
+
+    async function postClientUpdate(payload) {
+      const id = document.getElementById('cd-id').value;
+      const res = await window.mBank.apiFetch('/painel-admin/api/clientes/' + id + '/atualizar/', {
+        method: 'POST',
+        body: payload
+      });
+      window.mBank.toast(res.detail || 'Atualizado!');
+      window.location.reload();
+    }
+
+    document.getElementById('cd-save-limit').addEventListener('click', function () {
+      const val = window.mBank.parseBRL(document.getElementById('cd-limit').value);
+      if (!Number.isFinite(val) || val < 0) {
+        window.mBank.toast('Informe um limite válido.', 'error');
+        return;
+      }
+      postClientUpdate({ preapproved_limit: val.toFixed(2) }).catch(function (e) { window.mBank.toast(e.message, 'error'); });
+    });
+
+    document.getElementById('cd-open-account').addEventListener('click', function () {
+      postClientUpdate({ action: 'open_account' }).catch(function (e) { window.mBank.toast(e.message, 'error'); });
+    });
+
+    document.getElementById('cd-toggle-active').addEventListener('click', function () {
+      postClientUpdate({ action: 'toggle_active' }).catch(function (e) { window.mBank.toast(e.message, 'error'); });
+    });
+  })();
+</script>
+{% endblock %}

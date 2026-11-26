@@ -1,52 +1,165 @@
 {% extends "base.html" %}
+{% load static mbank_tags %}
 
-{% block title %}List of mBank Transactions{% endblock %}
-
-{% block breadcrumbs_container %}
-    <nav aria-label="Breadcrumb">
-        <ol class="breadcrumb">
-            <li><a href="{% url 'home' %}">Home</a></li>
-            <li><a href="{% url 'bank:transactions_list' %}"{% if not view.kwargs.account_id %} aria-current="page"{% endif %}>Transactions</a></li>
-        </ol>
-    </nav>
-{% endblock %}
+{% block title %}Extrato — mBank{% endblock %}
 
 {% block content %}
-    <div class="container">
-        <div class="row">
-            <h1>List of mBank Transactions</h1>
+  <section class="mb-page-intro">
+    <h2 class="mb-page-title-md" style="font-weight:700;">Extrato</h2>
+    <p class="mb-page-subtitle-md">Acompanhe as movimentações da sua conta</p>
+  </section>
 
-            <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>timestamp</th>
-                    <th>type</th>
-                    <th>from</th>
-                    <th>to</th>
-                    <th>amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for transaction in object_list %}
-                    <tr>
-                        <td>{{ transaction.timestamp }}</td>
-                        <td>{{ transaction.get_type }}</td>
-                        <td>
-                            {{ transaction.src.iban }}
-                        </td>
-                        <td>
-                            {{ transaction.dest.iban }}
-                        </td>
-                        <td>{{ transaction.amount }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-
-            </table>
-        </div>
-
-        <div class="row text-right">
-            <a class="btn btn-primary" href="{% url 'bank:transactions_create' %}">Make Transaction</a>
-        </div>
+  <!-- Card Único de Saldo Disponível -->
+  <section class="mb-statement-balance">
+    <div>
+      <div style="font-size:15px;font-weight:600;letter-spacing:0.9px;text-transform:uppercase;color:var(--text-secondary);">
+        SALDO DISPONÍVEL
+      </div>
+      <div style="font-size:24px;font-weight:800;color:var(--text-heading);margin-top:4px;letter-spacing:-0.5px;">
+        R$ {{ available_balance|brl }}
+      </div>
     </div>
+
+    <div style="background:rgba(43,40,58,0.65);border:1px solid rgba(72,69,85,0.2);border-radius:14px;padding:10px 18px;display:flex;align-items:center;gap:10px;">
+      <img src="{% static 'mbank/assets/9ce45.svg' %}" alt="" width="18" height="18">
+      {% if open_accounts|length > 1 %}
+        <select id="statement-account-filter" class="mb-origin-select" style="font-size:15px;font-weight:400;color:var(--text-secondary);">
+          <option value="" {% if not selected_account %}selected{% endif %}>Todas as contas</option>
+          {% for acc in open_accounts %}
+            <option value="{{ acc.id }}" {% if selected_account and selected_account.id == acc.id %}selected{% endif %}>
+              Conta 0001 • {{ acc.iban }}
+            </option>
+          {% endfor %}
+        </select>
+      {% elif selected_account %}
+        <span style="font-size:15px;color:var(--text-secondary);">Conta 0001 • {{ selected_account.iban }}</span>
+      {% elif open_accounts %}
+        <span style="font-size:15px;color:var(--text-secondary);">Conta 0001 • {{ open_accounts.0.iban }}</span>
+      {% else %}
+        <span style="font-size:15px;color:var(--text-secondary);">Sem contas ativas</span>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Filtros Simplificados -->
+  <div class="mb-filter-bar">
+    <a href="?{% if selected_account and not view.kwargs.account_id %}account_id={{ selected_account.id }}{% endif %}" class="mb-filter-pill {% if not active_days %}active{% endif %}">Todos</a>
+    <a href="?days=7{% if selected_account and not view.kwargs.account_id %}&account_id={{ selected_account.id }}{% endif %}" class="mb-filter-pill {% if active_days == 7 %}active{% endif %}">7 dias</a>
+    <a href="?days=15{% if selected_account and not view.kwargs.account_id %}&account_id={{ selected_account.id }}{% endif %}" class="mb-filter-pill {% if active_days == 15 %}active{% endif %}">15 dias</a>
+    <a href="?days=30{% if selected_account and not view.kwargs.account_id %}&account_id={{ selected_account.id }}{% endif %}" class="mb-filter-pill {% if active_days == 30 %}active{% endif %}">30 dias</a>
+  </div>
+
+  <!-- Lista de Movimentações Agrupadas por Dia -->
+  {% if grouped_transactions %}
+    <div style="display:flex;flex-direction:column;gap:22px;width:100%;">
+      {% for day_header, items in grouped_transactions %}
+        <section class="mb-day-group">
+          <div class="mb-day-label">{{ day_header }}</div>
+          <div class="mb-day-list">
+            {% for tx in items %}
+              <div class="mb-stmt-row">
+                <div style="display:flex;align-items:center;gap:16px;">
+                  <div class="mb-stmt-icon {{ tx.direction }}">
+                    {% if tx.icon_kind == 'deposit' %}
+                      <img src="{% static 'mbank/assets/01674.svg' %}" alt="" width="22" height="19">
+                    {% elif tx.icon_kind == 'withdraw' %}
+                      <img src="{% static 'mbank/assets/20f9d.svg' %}" alt="" width="20" height="17">
+                    {% elif tx.icon_kind == 'transfer_in' or tx.icon_kind == 'yield' %}
+                      <img src="{% static 'mbank/assets/2e12f.svg' %}" alt="" width="17" height="17">
+                    {% else %}
+                      <img src="{% static 'mbank/assets/ace22.svg' %}" alt="" width="17" height="17">
+                    {% endif %}
+                  </div>
+                  <div>
+                    <div class="mb-stmt-title">{{ tx.title }}</div>
+                    <div class="mb-stmt-sub">{{ tx.subtitle }} • {{ tx.time_str }}</div>
+                  </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:16px;">
+                  <div class="mb-stmt-amount {{ tx.direction }}">
+                    {% if tx.direction == 'in' %}+ R$ {{ tx.amount|brl }}{% else %}- R$ {{ tx.amount|brl }}{% endif %}
+                  </div>
+                  <button
+                    type="button"
+                    class="mb-receipt-btn js-open-receipt"
+                    title="Ver comprovante"
+                    data-id="{{ tx.id }}"
+                    data-title="{{ tx.title }}"
+                    data-sub="{{ tx.subtitle }}"
+                    data-date="{{ tx.date_full }}"
+                    data-amount="{% if tx.direction == 'in' %}+ R$ {{ tx.amount|brl }}{% else %}- R$ {{ tx.amount|brl }}{% endif %}"
+                    data-src="{{ tx.src_iban|default:'—' }}"
+                    data-dest="{{ tx.dest_iban|default:'—' }}"
+                    data-type="{{ tx.transaction_type }}"
+                  >
+                    <img src="{% static 'mbank/assets/bb9fb.svg' %}" alt="Comprovante" width="18" height="20">
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="mb-card mb-empty-state">
+      Nenhuma movimentação encontrada para o filtro selecionado.
+    </div>
+  {% endif %}
+
+  <!-- Modal Comprovante -->
+  <div class="mb-modal-backdrop" id="modal-receipt">
+    <div class="mb-modal">
+      <div class="mb-modal-header">
+        <h3 class="mb-modal-title">Comprovante de movimentação</h3>
+        <button type="button" class="mb-modal-close" data-close-modal="modal-receipt">&times;</button>
+      </div>
+      <div style="background:var(--bg-elevated);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;font-size:14px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Identificador</span><strong id="rcp-id"></strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Operação</span><strong id="rcp-title"></strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Data e hora</span><strong id="rcp-date"></strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Origem</span><strong id="rcp-src"></strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Destino</span><strong id="rcp-dest"></strong></div>
+        <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border-line);">
+          <span style="color:var(--text-secondary);">Valor</span>
+          <strong id="rcp-amount" style="font-size:17px;"></strong>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button type="button" class="mb-btn-primary" data-close-modal="modal-receipt">Fechar</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const sel = document.getElementById('statement-account-filter');
+    if (sel) {
+      sel.addEventListener('change', function () {
+        const val = sel.value;
+        const params = new URLSearchParams(window.location.search);
+        if (val) {
+          window.location.href = '/bank/accounts/' + val + '/transactions' + (params.get('days') ? '?days=' + params.get('days') : '');
+        } else {
+          window.location.href = "{% url 'bank:transactions_list' %}" + (params.get('days') ? '?days=' + params.get('days') : '');
+        }
+      });
+    }
+
+    document.querySelectorAll('.js-open-receipt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.getElementById('rcp-id').textContent = '#' + btn.getAttribute('data-id');
+        document.getElementById('rcp-title').textContent = btn.getAttribute('data-title');
+        document.getElementById('rcp-date').textContent = btn.getAttribute('data-date');
+        document.getElementById('rcp-src').textContent = btn.getAttribute('data-src');
+        document.getElementById('rcp-dest').textContent = btn.getAttribute('data-dest');
+        document.getElementById('rcp-amount').textContent = btn.getAttribute('data-amount');
+        window.mBank.openModal('modal-receipt');
+      });
+    });
+  })();
+</script>
 {% endblock %}

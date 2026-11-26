@@ -1,43 +1,27 @@
 {% extends "base.html" %}
+{% load mbank_tags %}
 
-{% block title %}Client {{ object.name }}{% endblock %}
-
-{% block breadcrumbs_container %}
-    <nav aria-label="Breadcrumb">
-        <ol class="breadcrumb">
-            <li><a href="{% url 'home' %}">Home</a></li>
-            <li><a href="{% url 'bank:clients_list' %}">Clients</a></li>
-            <li><a href="{% url 'bank:clients_detail' object.id %}" aria-current="page">{{ object.name }}</a></li>
-        </ol>
-    </nav>
-{% endblock %}
+{% block title %}{{ object.name }} — mBank{% endblock %}
 
 {% block content %}
-    <h1>Client {{ object.name }}</h1>
+  <section class="mb-page-intro">
+    <h2 class="mb-page-title-md">{{ object.name|default:object.username }}</h2>
+    <p class="mb-page-subtitle">Contas vinculadas ao titular.</p>
+  </section>
 
-    <h2>Accounts</h2>
-
-    <table class="table table-striped">
-    <thead>
-        <tr>
-            <th>IBAN</th>
-            <th>balance</th>
-            <th>transactions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for account in object.account_set.all %}
-            <tr>
-                <td>{{ account.iban }}</td>
-                <td>{{ account.balance }}</td>
-                <td>
-                    <a href="{% url 'bank:account_transactions' account.id %}">
-                        {{ account.transactions.count }}
-                    </a>
-                </td>
-            </tr>
-        {% endfor %}
-    </tbody>
-    </table>
-
+  <section class="mb-recent-card">
+    {% for account in object.account_set.all %}
+      <div class="mb-recent-row">
+        <div>
+          <div class="mb-tx-title">{{ account.iban }}</div>
+          <div class="mb-tx-meta">R$ {{ account.balance|brl }}</div>
+        </div>
+        <a href="{% url 'bank:account_transactions' account.id %}" class="mb-link-accent">
+          {{ account.transactions.count }} transações
+        </a>
+      </div>
+    {% empty %}
+      <div class="mb-empty-state">Nenhuma conta encontrada.</div>
+    {% endfor %}
+  </section>
 {% endblock %}

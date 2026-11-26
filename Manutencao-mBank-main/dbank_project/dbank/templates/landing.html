@@ -1,0 +1,167 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mBank — Seu banco, do seu jeito</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'mbank/css/mbank.css' %}">
+</head>
+<body class="mbl-page">
+  <!-- Header -->
+  <header class="mbl-header">
+    <div class="mbl-header-inner">
+      <a href="{% url 'home' %}" class="mb-brand">
+        <div class="mb-brand-logo-wrap" style="width:42px;height:44px;">
+          <img src="{% static 'mbank/assets/8cf0b.png' %}" alt="mBank">
+        </div>
+        <div class="mb-brand-text">
+          <span class="mb-brand-name" style="font-size:30px;">mBank</span>
+          <span class="mb-brand-tagline" style="font-size:11.5px;">Seu banco, do seu jeito</span>
+        </div>
+      </a>
+
+      <nav class="mbl-header-actions" aria-label="Acesso rápido">
+        <a href="{% url 'admin_login' %}" class="mbl-nav-link">Acesso Admin</a>
+        <a href="{% url 'login' %}" class="mbl-nav-link outline">Entrar na Conta</a>
+        <a href="{% url 'register' %}" class="mbl-nav-link primary">Abrir Conta</a>
+        <a href="{% url 'login' %}" class="mba-avatar-badge" style="width:32px;height:32px;background:rgba(201,191,255,0.16);border:1px solid var(--border-line);" title="Acessar conta">
+          <img src="{% static 'mbank/assets/d17ea.svg' %}" alt="" width="13" height="14">
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="mbl-hero">
+    <div class="mbl-halo mbl-halo-top"></div>
+    <div class="mbl-halo mbl-halo-right"></div>
+    <div class="mbl-halo mbl-halo-left"></div>
+
+    <div class="mbl-hero-inner">
+      <!-- Left Column -->
+      <div>
+        <div class="mbl-live-badge">
+          <span class="mbl-live-dot"></span>
+          <span>⚡ NOVA EXPERIÊNCIA BANCÁRIA DIGITAL</span>
+        </div>
+
+        <h1 class="mbl-hero-title">
+          O futuro do seu dinheiro começa aqui.
+          <span class="accent">Simples, inteligente e humano.</span>
+        </h1>
+
+        <p class="mbl-hero-sub">
+          Mais que um banco digital. Uma plataforma completa de inteligência financeira concebida para dar controle total sobre suas finanças, transferências instantâneas Pix sem taxas e segurança de nível institucional.
+        </p>
+
+        <div class="mbl-cta-row">
+          <a href="{% url 'register' %}" class="mb-btn-primary" style="padding:14px 26px;font-size:15.5px;">
+            <span>Abrir Conta Gratuita</span>
+            <img src="{% static 'mbank/assets/e0262.svg' %}" alt="" width="14" height="10">
+          </a>
+
+          <a href="{% url 'login' %}" class="mbl-cta-secondary">
+            <img src="{% static 'mbank/assets/d17ea.svg' %}" alt="" width="14" height="15">
+            <span>Acessar Conta de Usuário</span>
+          </a>
+        </div>
+
+        <a href="{% url 'admin_login' %}" class="mbl-staff-link">
+          <span class="mbl-staff-dot"></span>
+          <span>Portal Administrativo &amp; Backoffice</span>
+          <img src="{% static 'mbank/assets/50c87.svg' %}" alt="" width="12" height="9">
+        </a>
+      </div>
+
+      <!-- Right Visual Column -->
+      <div class="mbl-visual-col">
+        <div class="mbl-card-glow"></div>
+
+        <!-- Stylized mBank Black/Violet Card -->
+        <div class="mbl-holo-card">
+          <div class="mbl-holo-sheen"></div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;position:relative;z-index:2;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <img src="{% static 'mbank/assets/8cf0b.png' %}" alt="" width="28" height="26" style="object-fit:contain;">
+              <span style="font-family:var(--font-inter);font-weight:700;font-size:19px;">mBank</span>
+              <span style="background:rgba(201,191,255,0.16);border:1px solid rgba(201,191,255,0.28);border-radius:9999px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:0.8px;color:var(--brand-lavender);">BLACK</span>
+            </div>
+            <img src="{% static 'mbank/assets/ba547.svg' %}" alt="" width="17" height="20" style="opacity:0.85;">
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;position:relative;z-index:2;">
+            <div class="mbl-chip"></div>
+            <span style="font-family:var(--font-mono);font-size:16px;letter-spacing:2px;color:var(--text-heading);">•••• 8829</span>
+          </div>
+
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;position:relative;z-index:2;">
+            <div>
+              <div style="font-size:9.5px;letter-spacing:0.9px;color:var(--text-subtle);text-transform:uppercase;">TITULAR DA CONTA</div>
+              <div style="font-size:13.5px;font-weight:700;letter-spacing:0.6px;color:#ffffff;margin-top:2px;">ISRAEL LEVY</div>
+            </div>
+            <div style="display:flex;align-items:center;">
+              <span style="width:24px;height:24px;border-radius:9999px;background:rgba(137,90,225,0.75);display:inline-block;"></span>
+              <span style="width:24px;height:24px;border-radius:9999px;background:rgba(201,191,255,0.55);margin-left:-9px;display:inline-block;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Notification Pill -->
+        <div class="mbl-pix-pill">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(0,165,116,0.25);display:flex;align-items:center;justify-content:center;">
+              <img src="{% static 'mbank/assets/43daf.svg' %}" alt="" width="14" height="16">
+            </div>
+            <div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--text-heading);">Transferência Pix Recebida</div>
+              <div style="font-size:12px;color:var(--text-secondary);">Marina Costa • há 3 minutos</div>
+            </div>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:var(--positive-emerald);white-space:nowrap;">+ R$ 1.450,00</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final Call to Action Banner -->
+  <section class="mbl-cta-section">
+    <div class="mbl-cta-banner">
+      <div class="mbl-halo" style="width:320px;height:320px;right:-80px;top:-90px;background:rgba(93,63,224,0.28);"></div>
+      <div class="mbl-halo" style="width:320px;height:320px;left:-80px;bottom:-90px;background:rgba(137,90,225,0.2);"></div>
+
+      <div class="mbl-shield-badge" style="position:relative;z-index:2;">
+        <img src="{% static 'mbank/assets/ba547.svg' %}" alt="" width="22" height="24">
+      </div>
+
+      <h2 class="mbl-banner-title" style="position:relative;z-index:2;">
+        Pronto para transformar sua relação com o seu dinheiro?
+      </h2>
+
+      <p class="mbl-banner-sub" style="position:relative;z-index:2;">
+        Abra sua conta mBank em menos de 3 minutos e descubra uma forma muito mais inteligente, humana e poderosa de gerenciar seu patrimônio.
+      </p>
+
+      <div class="mbl-cta-row" style="justify-content:center;margin-top:8px;position:relative;z-index:2;">
+        <a href="{% url 'register' %}" class="mb-btn-primary" style="padding:14px 28px;">
+          <span>Quero ser mBank (Criar Conta)</span>
+        </a>
+        <a href="{% url 'login' %}" class="mbl-cta-secondary">
+          <span>Já sou cliente (Fazer Login)</span>
+        </a>
+      </div>
+
+      <div style="margin-top:12px;font-size:13px;color:var(--text-subtle);position:relative;z-index:2;">
+        Acesso restrito para colaboradores e gerência:
+        <a href="{% url 'admin_login' %}" style="color:var(--brand-lavender);font-weight:600;text-decoration:underline;margin-left:6px;">
+          Entrar no Painel Administrativo →
+        </a>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

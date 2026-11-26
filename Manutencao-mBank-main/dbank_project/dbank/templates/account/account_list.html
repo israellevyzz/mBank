@@ -1,55 +1,234 @@
 {% extends "base.html" %}
+{% load static mbank_tags %}
 
-{% block title %}List of mBank Accounts{% endblock %}
-
-{% block breadcrumbs_container %}
-    <nav aria-label="Breadcrumb">
-        <ol class="breadcrumb">
-            <li><a href="{% url 'home' %}">Home</a></li>
-            <li><a href="{% url 'bank:accounts_list' %}" aria-current="page">Accounts</a></li>
-        </ol>
-    </nav>
-{% endblock %}
+{% block title %}Minhas Contas — mBank{% endblock %}
 
 {% block content %}
-    <div class="container">
-        <div class="row">
-        <h1>List of mBank Accounts</h1>
-
-        <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>IBAN</th>
-                <th>balance</th>
-                <th>owner</th>
-                <th>transactions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for account in object_list %}
-                <tr>
-                    <td>{{ account.iban }}</td>
-                    <td>{{ account.balance }}</td>
-                    <td>
-                        <a href="{% url 'bank:clients_detail' account.owner.id %}">{{ account.owner.name }}</a>
-                    </td>
-                    <td>
-                        <a href="{% url 'bank:account_transactions' account.id %}">
-                            {{ account.transactions.count }}
-                        </a>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-
-        </table>
-        </div>
-
-        <div class="row text-right">
-            <nav class="btn-group" aria-label="Account actions">
-                <a class="btn btn-primary" href="{% url 'bank:accounts_create' %}">New Account</a>
-                <a class="btn btn-primary" href="{% url 'bank:transactions_create' %}">Make Transaction</a>
-            </nav>
-        </div>
+  <section class="mb-page-intro-row">
+    <div class="mb-page-intro">
+      <h2 class="mb-page-title-lg">Minhas Contas</h2>
+      <p class="mb-page-subtitle">Gerencie suas contas ativas e crie novos acessos com agilidade e total sigilo.</p>
     </div>
+    <button type="button" class="mb-btn-lavender" id="open-new-account-btn">
+      <img src="{% static 'mbank/assets/80efe.svg' %}" alt="" width="17" height="17">
+      <span>Nova Conta</span>
+    </button>
+  </section>
+
+  <!-- Executive Summary Grid -->
+  <section class="mb-summary-3">
+    <article class="mb-exec-card">
+      <div class="mb-exec-top">
+        <span class="mb-exec-label">SALDO DISPONÍVEL</span>
+        <span class="mb-exec-icon"><img src="{% static 'mbank/assets/3a4ef.svg' %}" alt=""></span>
+      </div>
+      <div class="mb-exec-metric">
+        <span class="mb-exec-currency">R$</span>
+        <span class="mb-exec-num">{{ total_available|brl }}</span>
+      </div>
+      {% if total_reserved > 0 %}
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+          R$ {{ total_reserved|brl }} no Cofrinho · Total: R$ {{ total_balance|brl }}
+        </div>
+      {% endif %}
+    </article>
+
+    <article class="mb-exec-card">
+      <div class="mb-exec-top">
+        <span class="mb-exec-label">CONTAS CADASTRADAS</span>
+        <span class="mb-exec-icon"><img src="{% static 'mbank/assets/d3507.svg' %}" alt=""></span>
+      </div>
+      <div class="mb-exec-metric">
+        <span class="mb-exec-num">{{ active_accounts_count }}</span>
+        <span class="mb-exec-currency">{% if active_accounts_count == 1 %}conta ativa{% else %}contas ativas{% endif %}</span>
+      </div>
+    </article>
+
+    <article class="mb-exec-card">
+      <div class="mb-exec-top">
+        <span class="mb-exec-label">MOVIMENTAÇÕES DO MÊS</span>
+        <span class="mb-exec-icon"><img src="{% static 'mbank/assets/134ce.svg' %}" alt=""></span>
+      </div>
+      <div class="mb-exec-metric">
+        <span class="mb-exec-num">{{ monthly_ops_count }}</span>
+        <span class="mb-exec-currency">{% if monthly_ops_count == 1 %}operação{% else %}operações{% endif %}</span>
+      </div>
+    </article>
+  </section>
+
+  <!-- Contas Vinculadas -->
+  <section style="display:flex;flex-direction:column;gap:16px;margin-top:6px;">
+    <div class="mb-section-head">
+      <h3 class="mb-section-title-jakarta">Contas Vinculadas</h3>
+      <span style="font-size:11px;font-weight:600;color:var(--text-secondary);">Atualizado em tempo real</span>
+    </div>
+
+    {% if account_cards %}
+      <div class="mb-accounts-grid">
+        {% for item in account_cards %}
+          <article class="mb-account-card" data-account-id="{{ item.account.id }}">
+            <div class="mb-account-card-body">
+              <div class="mb-section-head">
+                {% if item.is_open %}
+                  <span class="mb-status-pill">ABERTA</span>
+                {% else %}
+                  <span class="mb-status-pill closed">ENCERRADA</span>
+                {% endif %}
+                <span class="mb-ops-pill">
+                  <img src="{% static 'mbank/assets/60f2d.svg' %}" alt="" width="12" height="13">
+                  <span>{{ item.ops_count }} {% if item.ops_count == 1 %}operação{% else %}operações{% endif %}</span>
+                </span>
+              </div>
+
+              <div>
+                <div class="mb-account-name-row">
+                  <h4 class="mb-account-title">{{ item.title }}</h4>
+                  <span class="mb-account-kind">{{ item.kind_label }}</span>
+                </div>
+                <div class="mb-iban-row">
+                  <span class="mb-iban-label">IBAN:</span>
+                  <span class="mb-iban-value">{{ item.account.iban }}</span>
+                  <button
+                    type="button"
+                    class="mb-copy-btn"
+                    data-copy-text="{{ item.account.iban }}"
+                    data-copy-msg="IBAN {{ item.account.iban }} copiado!"
+                    title="Copiar IBAN"
+                  >
+                    <img src="{% static 'mbank/assets/17bb0.svg' %}" alt="Copiar" width="12" height="14">
+                  </button>
+                </div>
+              </div>
+
+              <div style="padding-top:6px;">
+                <div class="mb-account-balance-label">SALDO ATUAL DISPONÍVEL</div>
+                <div class="mb-account-balance-val">
+                  <span class="rs">R$</span>
+                  <span class="num">{{ item.account.available_balance|brl }}</span>
+                </div>
+                {% if item.account.reserved_balance > 0 %}
+                  <div class="mb-account-reserved-note">
+                    Total: R$ {{ item.account.balance|brl }} · Reservado em cofrinhos: R$ {{ item.account.reserved_balance|brl }}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="mb-account-actions">
+              <a href="{% url 'bank:account_transactions' item.account.id %}" class="mb-account-action-btn">
+                <img src="{% static 'mbank/assets/cb04c.svg' %}" alt="" width="13" height="15">
+                <span>Extrato</span>
+              </a>
+              {% if item.is_open %}
+                <a href="{% url 'bank:transfer' %}?account_id={{ item.account.id }}" class="mb-account-action-btn">
+                  <img src="{% static 'mbank/assets/20676.svg' %}" alt="" width="15" height="13">
+                  <span>Transferir</span>
+                </a>
+                <a href="{% url 'bank:deposit' %}?account_id={{ item.account.id }}" class="mb-account-action-btn">
+                  <img src="{% static 'mbank/assets/a53f1.svg' %}" alt="" width="12" height="12">
+                  <span>Depositar</span>
+                </a>
+                <button
+                  type="button"
+                  class="mb-account-action-btn danger js-close-account"
+                  data-account-id="{{ item.account.id }}"
+                  data-account-iban="{{ item.account.iban }}"
+                >
+                  <img src="{% static 'mbank/assets/b26a0.svg' %}" alt="" width="15" height="15">
+                  <span>Encerrar</span>
+                </button>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="mb-card mb-empty-state">
+        Você ainda não possui contas cadastradas. Clique em <strong>Nova Conta</strong> para abrir sua primeira conta digital.
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Modal: Nova Conta -->
+  <div class="mb-modal-backdrop" id="modal-new-account">
+    <div class="mb-modal">
+      <div class="mb-modal-header">
+        <h3 class="mb-modal-title">Abrir Nova Conta</h3>
+        <button type="button" class="mb-modal-close" data-close-modal="modal-new-account">&times;</button>
+      </div>
+      <p class="mb-page-subtitle">
+        Informe um IBAN no formato <code style="color:var(--brand-lavender);">BR</code> seguido de até 8 dígitos (ou use a sugestão gerada).
+      </p>
+      <form id="new-account-form" style="display:flex;flex-direction:column;gap:14px;">
+        <div class="mb-field-group">
+          <label class="mb-field-label" for="new-account-iban">IBAN da nova conta</label>
+          <input type="text" id="new-account-iban" class="mb-input" maxlength="10" placeholder="BR12345678" required>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button type="button" class="mb-btn-secondary" data-close-modal="modal-new-account">Cancelar</button>
+          <button type="submit" class="mb-btn-primary" id="submit-new-account">Criar conta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    function randomIban() {
+      const n = Math.floor(10000000 + Math.random() * 89999999);
+      return 'BR' + n;
+    }
+
+    const openBtn = document.getElementById('open-new-account-btn');
+    const ibanInput = document.getElementById('new-account-iban');
+    const form = document.getElementById('new-account-form');
+
+    function openCreateModal() {
+      ibanInput.value = randomIban();
+      window.mBank.openModal('modal-new-account');
+    }
+
+    if (openBtn) openBtn.addEventListener('click', openCreateModal);
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('nova') === '1') openCreateModal();
+
+    if (form) {
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const btn = document.getElementById('submit-new-account');
+        btn.disabled = true;
+        try {
+          await window.mBank.apiFetch('/bank/api/accounts/', {
+            method: 'POST',
+            body: { iban: ibanInput.value.trim().toUpperCase() }
+          });
+          window.mBank.toast('Conta criada com sucesso!');
+          window.location.href = "{% url 'bank:accounts_list' %}";
+        } catch (err) {
+          window.mBank.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    document.querySelectorAll('.js-close-account').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        const id = btn.getAttribute('data-account-id');
+        const iban = btn.getAttribute('data-account-iban');
+        if (!window.confirm('Deseja realmente encerrar a conta ' + iban + '?')) return;
+        try {
+          await window.mBank.apiFetch('/bank/api/accounts/' + id + '/encerrar/', { method: 'POST' });
+          window.mBank.toast('Conta ' + iban + ' encerrada.');
+          window.location.reload();
+        } catch (err) {
+          window.mBank.toast(err.message, 'error');
+        }
+      });
+    });
+  })();
+</script>
 {% endblock %}

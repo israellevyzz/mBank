@@ -9,10 +9,19 @@ from django.db import models
 # Create your models here.
 
 class Client(AbstractUser):
+    APPROVAL_CHOICES = [
+        ('APPROVED', 'Aprovado'),
+        ('PENDING', 'Pendente'),
+        ('REJECTED', 'Rejeitado'),
+    ]
+
     preapproved_limit = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True,
                                             validators=[MinValueValidator(0)])
     name = models.CharField('clients name', max_length=128, null=False)
     phone_number = models.CharField('phone number', max_length=64, blank=True)
+    birth_date = models.CharField('birth date', max_length=20, blank=True, default='')
+    account_type = models.CharField('account type', max_length=30, blank=True, default='Corrente')
+    approval_status = models.CharField(max_length=16, choices=APPROVAL_CHOICES, default='APPROVED')
 
     def __str__(self):
         return '{}: {}'.format(self.id, self.name)

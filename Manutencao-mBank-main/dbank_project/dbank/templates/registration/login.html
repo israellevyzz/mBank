@@ -1,12 +1,139 @@
-{% extends "base.html" %}
-{% load bootstrap3 %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar — mBank</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'mbank/css/mbank.css' %}">
+</head>
+<body>
+  <div class="mb-auth-page">
+    <section class="mb-auth-left">
+      <div class="mb-auth-wave">
+        <img src="{% static 'mbank/assets/911ce.png' %}" alt="">
+      </div>
 
-{% block content %}
-    <form method="post">
-         {% csrf_token %}
-         {% bootstrap_form form %}
-         {% buttons %}
-         <button type="submit" name="save" value=True class="btn btn-success">Login</button>
-         {% endbuttons %}
-      </form>
-{% endblock %}
+      <div class="mb-auth-left-inner">
+        <a href="{% url 'home' %}" class="mb-brand">
+          <div class="mb-brand-logo-wrap" style="width:53px;height:56px;">
+            <img src="{% static 'mbank/assets/8cf0b.png' %}" alt="mBank">
+          </div>
+          <div class="mb-brand-text">
+            <span class="mb-brand-name" style="font-size:42px;">mBank</span>
+            <span class="mb-brand-tagline" style="font-size:15px;">Seu banco, do seu jeito</span>
+          </div>
+        </a>
+
+        <div>
+          <h1 class="mb-auth-headline">
+            Mais controle
+            <span class="gradient-text">para seu amanhã.</span>
+          </h1>
+          <p class="mb-auth-desc">
+            No mBank, você tem tudo o que precisa para cuidar do seu dinheiro de forma simples, segura e sem complicação.
+          </p>
+        </div>
+
+        <div class="mb-auth-features">
+          <div class="mb-auth-feature">
+            <img src="{% static 'mbank/assets/27a9f.svg' %}" alt="">
+            <span>Conta digital gratuita</span>
+          </div>
+          <div class="mb-auth-feature">
+            <img src="{% static 'mbank/assets/74908.svg' %}" alt="">
+            <span>Pix e transferências instantâneas</span>
+          </div>
+          <div class="mb-auth-feature">
+            <img src="{% static 'mbank/assets/ba547.svg' %}" alt="">
+            <span>Segurança de ponta</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-auth-left-footer">
+        <p class="mb-auth-footer-brand">mBank</p>
+        <p class="mb-auth-footer-sub">Mais que um banco, é o seu futuro.</p>
+      </div>
+    </section>
+
+    <section class="mb-auth-right">
+      <div class="mb-auth-card">
+        <div class="mb-auth-logo-sm">
+          <img src="{% static 'mbank/assets/8cf0b.png' %}" alt="mBank">
+          <span>mBank</span>
+        </div>
+
+        <div>
+          <h2 style="font-family:var(--font-inter);font-size:26px;font-weight:600;color:#fff;margin:0 0 8px;">
+            Acesse sua conta
+          </h2>
+          <p style="font-family:var(--font-inter);font-size:16px;color:#bcc0d1;margin:0;line-height:1.5;">
+            Use seu CPF e senha para entrar no seu banco de forma segura.
+          </p>
+        </div>
+
+        {% if form.errors %}
+          <div class="mb-auth-error">
+            {% for err in form.non_field_errors %}
+              <div>{{ err }}</div>
+            {% empty %}
+              CPF/usuário ou senha incorretos. Confira seus dados e tente novamente.
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}" style="display:flex;flex-direction:column;gap:26px;">
+          {% csrf_token %}
+          {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+          <div class="mb-auth-input-wrap">
+            <img src="{% static 'mbank/assets/d17ea.svg' %}" alt="" width="15" height="16">
+            <input
+              type="text"
+              name="username"
+              id="id_username"
+              value="{{ form.username.value|default:'' }}"
+              placeholder="CPF ou Usuário"
+              autocomplete="username"
+              required
+            >
+          </div>
+
+          <div class="mb-auth-input-wrap">
+            <img src="{% static 'mbank/assets/9f5b9.svg' %}" alt="" width="13" height="16">
+            <input
+              type="password"
+              name="password"
+              id="id_password"
+              placeholder="Senha"
+              autocomplete="current-password"
+              required
+            >
+            <button type="button" class="mb-eye-btn" data-toggle-password="id_password" aria-label="Mostrar senha">
+              <img src="{% static 'mbank/assets/d5972.svg' %}" alt="" width="18" height="12">
+            </button>
+          </div>
+
+          <button type="submit" class="mb-login-submit">
+            <span>Entrar</span>
+            <img src="{% static 'mbank/assets/e0262.svg' %}" alt="" width="15" height="10">
+          </button>
+        </form>
+
+        <p style="font-family:var(--font-inter);font-size:15px;color:#fff;text-align:center;margin:0;">
+          Ainda não tem uma conta?
+          <a href="{% url 'register' %}" style="color:var(--brand-accent-link);font-weight:600;text-decoration:underline;margin-left:4px;">
+            Abra já a sua
+          </a>
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <script src="{% static 'mbank/js/mbank.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Painel Administrativo — mBank{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'mbank/css/mbank.css' %}">
+</head>
+<body>
+  <div class="mba-shell">
+    <aside class="mba-sidebar">
+      <div>
+        <div class="mba-brand-bar">
+          <a href="{% url 'admin_overview' %}" class="mb-brand" style="gap:6px;">
+            <div class="mb-brand-logo-wrap" style="width:27px;height:29px;">
+              <img src="{% static 'mbank/assets/8cf0b.png' %}" alt="mBank">
+            </div>
+            <div class="mb-brand-text">
+              <span class="mb-brand-name" style="font-size:22px;">mBank</span>
+              <span class="mb-brand-tagline" style="font-size:8.5px;">Seu banco, do seu jeito</span>
+            </div>
+          </a>
+        </div>
+
+        <nav class="mba-nav-section" aria-label="Menu Administrativo">
+          <div class="mba-nav-label">GESTÃO &amp; CONTROLE</div>
+
+          <a href="{% url 'admin_overview' %}" class="mba-nav-item {% if admin_nav == 'overview' %}active{% endif %}">
+            <img src="{% static 'mbank/assets/c6751.svg' %}" alt="" width="15" height="15">
+            <span>Visão Geral</span>
+          </a>
+
+          <a href="{% url 'admin_clients' %}" class="mba-nav-item {% if admin_nav == 'clients' %}active{% endif %}">
+            <img src="{% static 'mbank/assets/d6729.svg' %}" alt="" width="16" height="16">
+            <span>Clientes &amp; Contas</span>
+          </a>
+
+          <a href="{% url 'admin_approvals' %}" class="mba-nav-item {% if admin_nav == 'approvals' %}active{% endif %}">
+            <img src="{% static 'mbank/assets/90e46.svg' %}" alt="" width="14" height="16">
+            <span>Aprovações</span>
+          </a>
+
+          <a href="{% url 'admin_transactions' %}" class="mba-nav-item {% if admin_nav == 'transactions' %}active{% endif %}">
+            <img src="{% static 'mbank/assets/7be31.svg' %}" alt="" width="16" height="13">
+            <span>Transações</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="mba-sidebar-footer">
+        <div class="mba-admin-card">
+          <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+            <span class="mba-avatar-badge">
+              <img src="{% static 'mbank/assets/42b57.svg' %}" alt="" width="12" height="12">
+            </span>
+            <div style="min-width:0;">
+              <div style="font-size:12px;font-weight:600;color:var(--text-heading);line-height:1.25;">Administrador</div>
+              <div style="font-size:11.5px;color:var(--text-secondary);line-height:1.25;">mBank</div>
+            </div>
+          </div>
+
+          <form method="post" action="{% url 'logout' %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" title="Sair" style="background:transparent;border:none;padding:6px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;">
+              <img src="{% static 'mbank/assets/4d6b6.svg' %}" alt="Sair" width="15" height="15">
+            </button>
+          </form>
+        </div>
+      </div>
+    </aside>
+
+    <div class="mba-content-col">
+      <header class="mba-topbar">
+        <span style="font-size:18px;font-weight:600;color:var(--text-heading);">Painel Administrativo</span>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <a href="{% url 'admin:index' %}" style="font-size:12px;color:var(--brand-lavender);text-decoration:underline;">Django Admin</a>
+          <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">Admin</span>
+          <span class="mba-avatar-badge">
+            <img src="{% static 'mbank/assets/42b57.svg' %}" alt="" width="12" height="12">
+          </span>
+        </div>
+      </header>
+
+      <main class="mba-main">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <div id="mb-toast-stack" class="mb-toast-stack"></div>
+  <script src="{% static 'mbank/js/mbank.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

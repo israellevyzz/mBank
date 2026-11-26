@@ -1,13 +1,28 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}New Account{% endblock %}
+{% block title %}Nova Conta — mBank{% endblock %}
 
 {% block content %}
-    <h1>New Account</h1>
+  <section class="mb-page-intro">
+    <h2 class="mb-page-title-md">Abrir Nova Conta</h2>
+    <p class="mb-page-subtitle">Cadastre um novo IBAN vinculado ao seu perfil mBank.</p>
+  </section>
 
-    <form action="" method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <input type="submit" value="Create" />
+  <section class="mb-form-panel" style="max-width:520px;">
+    {% if form.errors %}
+      <div class="mb-auth-error">{{ form.errors }}</div>
+    {% endif %}
+    <form method="post" style="display:flex;flex-direction:column;gap:16px;">
+      {% csrf_token %}
+      <div class="mb-field-group">
+        <label class="mb-field-label" for="{{ form.iban.id_for_label }}">IBAN</label>
+        <input type="text" name="iban" id="{{ form.iban.id_for_label }}" value="{{ form.iban.value|default:'' }}" maxlength="10" class="mb-input" required>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <a href="{% url 'bank:accounts_list' %}" class="mb-btn-secondary">Cancelar</a>
+        <button type="submit" class="mb-btn-primary">Salvar conta</button>
+      </div>
     </form>
+  </section>
 {% endblock %}

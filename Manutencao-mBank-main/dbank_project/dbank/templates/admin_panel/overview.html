@@ -1,0 +1,121 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load static mbank_tags %}
+
+{% block title %}Visão Geral — Painel Administrativo mBank{% endblock %}
+
+{% block content %}
+  <section class="mb-page-intro">
+    <h1 class="mb-page-title-lg">Visão Geral do Sistema</h1>
+    <p class="mb-page-subtitle">Painel de controle simplificado para gestão de clientes e contas</p>
+  </section>
+
+  <!-- 3 KPI Cards -->
+  <section class="mba-kpi-grid">
+    <article class="mba-kpi-card">
+      <div class="mba-kpi-top">
+        <span class="mba-kpi-title">TOTAL DE CLIENTES</span>
+        <img src="{% static 'mbank/assets/24d84.svg' %}" alt="" width="24" height="14">
+      </div>
+      <div class="mba-kpi-num">{{ total_clients }}</div>
+      <div class="mba-kpi-sub">Clientes cadastrados</div>
+    </article>
+
+    <article class="mba-kpi-card">
+      <div class="mba-kpi-top">
+        <span class="mba-kpi-title">CONTAS PENDENTES</span>
+        <img src="{% static 'mbank/assets/5f300.svg' %}" alt="" width="19" height="21">
+      </div>
+      <div class="mba-kpi-num pending">{{ pending_count }}</div>
+      <div class="mba-kpi-sub">Aguardando aprovação</div>
+    </article>
+
+    <article class="mba-kpi-card">
+      <div class="mba-kpi-top">
+        <span class="mba-kpi-title">TOTAL EM SALDO DE CLIENTES</span>
+        <img src="{% static 'mbank/assets/38223.svg' %}" alt="" width="19" height="18">
+      </div>
+      <div class="mba-kpi-num">R$ {{ total_balance|brl }}</div>
+      <div class="mba-kpi-sub">Saldo total depositado</div>
+    </article>
+  </section>
+
+  <!-- Dual Split Main Area -->
+  <section class="mba-split-overview">
+    <!-- Left: Contas Aguardando Aprovação -->
+    <div class="mba-panel">
+      <div class="mb-section-head">
+        <div>
+          <h2 class="mb-section-title-jakarta">Contas Aguardando Aprovação</h2>
+          <p style="margin:2px 0 0;font-size:12px;color:var(--text-secondary);">Novos cadastros para avaliar</p>
+        </div>
+        <span style="background:rgba(201,191,255,0.12);color:var(--brand-primary);border-radius:9999px;padding:3px 10px;font-size:11px;font-weight:600;">
+          {{ pending_count }} {% if pending_count == 1 %}pendente{% else %}pendentes{% endif %}
+        </span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        {% if pending_list %}
+          {% for item in pending_list %}
+            <div class="mba-list-row">
+              <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+                <div style="width:36px;height:36px;border-radius:9999px;background:var(--bg-elevated-3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  {% if item.is_pj %}
+                    <img src="{% static 'mbank/assets/dba7a.svg' %}" alt="" width="15" height="14">
+                  {% else %}
+                    <img src="{% static 'mbank/assets/69633.svg' %}" alt="" width="13" height="13">
+                  {% endif %}
+                </div>
+                <div style="min-width:0;">
+                  <div style="font-size:14px;font-weight:600;color:var(--text-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ item.name }}</div>
+                  <div style="font-size:12px;color:var(--text-secondary);">{{ item.doc_label }}: {{ item.doc }} • {{ item.account_type }}</div>
+                </div>
+              </div>
+              <a href="{% url 'admin_approvals' %}?id={{ item.id }}" class="mba-btn-analyze">Analisar</a>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="mb-empty-state" style="padding:20px;">
+            Nenhuma solicitação aguardando aprovação no momento.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right: Últimas Operações -->
+    <div class="mba-panel">
+      <div>
+        <h2 class="mb-section-title-jakarta">Últimas Operações</h2>
+        <p style="margin:2px 0 0;font-size:12px;color:var(--text-secondary);">Movimentações recentes no sistema</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        {% if recent_txs %}
+          {% for tx in recent_txs %}
+            <div class="mba-list-row">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text-heading);">{{ tx.actor_name }}</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
+                  {{ tx.relative }} •
+                  {% if tx.type_color == 'emerald' %}
+                    <span style="color:var(--positive-emerald);">{{ tx.type_label }}</span>
+                  {% elif tx.type_color == 'coral' %}
+                    <span style="color:var(--negative-coral);">{{ tx.type_label }}</span>
+                  {% else %}
+                    <span style="color:var(--brand-primary);">{{ tx.type_label }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div style="font-size:17px;font-weight:700;white-space:nowrap;{% if tx.type_color == 'emerald' %}color:var(--positive-emerald);{% elif tx.type_color == 'coral' %}color:var(--negative-coral);{% else %}color:var(--text-heading);{% endif %}">
+                {{ tx.amount_prefix }}R$ {{ tx.amount|brl }}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="mb-empty-state" style="padding:20px;">
+            Nenhuma operação registrada ainda.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

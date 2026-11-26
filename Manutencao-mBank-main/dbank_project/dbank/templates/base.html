@@ -1,137 +1,161 @@
-{% load bootstrap3 %}
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}mBank — Seu banco, do seu jeito{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'mbank/css/mbank.css' %}">
+  {% block stylesheets %}{% endblock %}
+</head>
+<body>
+  <div class="mb-shell">
+    <aside class="mb-sidebar">
+      <div class="mb-sidebar-top">
+        <a href="{% url 'home' %}" class="mb-brand">
+          <div class="mb-brand-logo-wrap">
+            <img src="{% static 'mbank/assets/8cf0b.png' %}" alt="mBank">
+          </div>
+          <div class="mb-brand-text">
+            <span class="mb-brand-name">mBank</span>
+            <span class="mb-brand-tagline">Seu banco, do seu jeito</span>
+          </div>
+        </a>
 
-        <title>
-            {% block title %}mBank{% endblock %}
-        </title>
+        <nav class="mb-nav" aria-label="Menu principal">
+          <a href="{% url 'home' %}" class="mb-nav-item {% if active_nav == 'home' %}active{% endif %}">
+            <span class="mb-nav-icon">
+              {% if active_nav == 'home' %}
+                <img src="{% static 'mbank/assets/9e58a.svg' %}" alt="">
+              {% else %}
+                <img src="{% static 'mbank/assets/70d36.svg' %}" alt="">
+              {% endif %}
+            </span>
+            <span>Home</span>
+          </a>
 
-        {% load static %}
-        {% bootstrap_css %}
-        <style>
-            .navbar-logout-form { margin: 0; padding: 0; }
-            .navbar-logout-btn {
-                background: none;
-                border: none;
-                padding: 15px;
-                color: #777;
-                font-size: 14px;
-                line-height: 20px;
-                cursor: pointer;
-            }
-            .navbar-logout-btn:hover, .navbar-logout-btn:focus {
-                color: #333;
-                background: none;
-                text-decoration: none;
-            }
-        </style>
-        {% block stylesheets %}
-{#            <link href="{% static "css/bootstrap.min.css" %}" rel="stylesheet">#}
-{#            <link href="{% static "css/bootstrap-theme.min.css" %}" rel="stylesheet">#}
-        {% endblock %}
-    </head>
-    <body>
-        {# Navigation Bar #}
-        <nav class="navbar navbar-default navbar-static-top">
-            <div class="container">
-                <div class="navbar-header">
-                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </button>
-                    <a class="navbar-brand" href="{% url "home" %}">
-                        {% block brand %}mBank{% endblock %}
-                    </a>
-                </div>
-                <div class="navbar-collapse collapse">
-                    <ul class="nav navbar-nav">
-                        {% block navbar %}
-                            <li><a href="{% url "bank:accounts_list" %}">Accounts</a></li>
-                            <li><a href="{% url "bank:transactions_list" %}">Transactions</a></li>
-                        {% endblock %}
-                    </ul>
-                    <ul class="nav navbar-nav navbar-right">
-                        {% block navbar_right %}
-                            {% if user.is_authenticated %}
-                                {% url "admin:index" as admin_url %}
-                                {% if user.is_staff and admin_url %}
-                                    <li>
-                                        <a href="{{ admin_url }}">
-                                            <span class="glyphicon glyphicon-dashboard"></span>
-                                            Administration
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                {% url "logout" as logout_url %}
-                                {% if logout_url %}
-                                    <li>
-                                        <form method="post" action="{{ logout_url }}" class="navbar-logout-form">
-                                            {% csrf_token %}
-                                            <button type="submit" class="navbar-logout-btn">
-                                                <span class="glyphicon glyphicon-log-out"></span>
-                                                Logout
-                                            </button>
-                                        </form>
-                                    </li>
-                                {% endif %}
-                            {% else %}
-                                {% url "login" as login_url %}
-                                {% if login_url %}
-                                    <li>
-                                        <a href="{{ login_url }}">
-                                            <span class="glyphicon glyphicon-log-in"></span>
-                                            Login
-                                        </a>
-                                    </li>
-                                {% endif %}
-                            {% endif %}
-                        {% endblock %}
-                    </ul>
-                </div>
-            </div>
+          <a href="{% url 'bank:accounts_list' %}" class="mb-nav-item {% if active_nav == 'accounts' %}active{% endif %}">
+            <span class="mb-nav-icon">
+              {% if active_nav == 'accounts' %}
+                <img src="{% static 'mbank/assets/fe098.svg' %}" alt="">
+              {% else %}
+                <img src="{% static 'mbank/assets/fbf7c.svg' %}" alt="">
+              {% endif %}
+            </span>
+            <span>Minhas contas</span>
+          </a>
+
+          <a href="{% url 'bank:deposit' %}" class="mb-nav-item {% if active_nav == 'deposit' %}active{% endif %}">
+            <span class="mb-nav-icon">
+              {% if active_nav == 'deposit' %}
+                <img src="{% static 'mbank/assets/459b1.svg' %}" alt="">
+              {% else %}
+                <img src="{% static 'mbank/assets/b89b2.svg' %}" alt="">
+              {% endif %}
+            </span>
+            <span>Depósito</span>
+          </a>
+
+          <a href="{% url 'bank:withdraw' %}" class="mb-nav-item {% if active_nav == 'withdraw' %}active{% endif %}">
+            <span class="mb-nav-icon">
+              {% if active_nav == 'withdraw' %}
+                <img src="{% static 'mbank/assets/1235c.svg' %}" alt="">
+              {% else %}
+                <img src="{% static 'mbank/assets/99ee4.svg' %}" alt="">
+              {% endif %}
+            </span>
+            <span>Saque</span>
+          </a>
+
+          <a href="{% url 'bank:transfer' %}" class="mb-nav-item {% if active_nav == 'transfer' %}active{% endif %}">
+            <span class="mb-nav-icon">
+              {% if active_nav == 'transfer' %}
+                <img src="{% static 'mbank/assets/57c27.svg' %}" alt="">
+              {% else %}
+                <img src="{% static 'mbank/assets/254ec.svg' %}" alt="">
+              {% endif %}
+            </span>
+            <span>Transferência</span>
+          </a>
+
+          <a href="{% url 'bank:transactions_list' %}" class="mb-nav-item {% if active_nav == 'statement' %}active{% endif %}">
+            <span class="mb-nav-icon">
+              {% if active_nav == 'statement' %}
+                <img src="{% static 'mbank/assets/dda03.svg' %}" alt="">
+              {% else %}
+                <img src="{% static 'mbank/assets/2e1d5.svg' %}" alt="">
+              {% endif %}
+            </span>
+            <span>Extrato</span>
+          </a>
+
+          <a href="{% url 'bank:piggy_bank' %}" class="mb-nav-item {% if active_nav == 'piggy' %}active{% endif %}">
+            <span class="mb-nav-icon">
+              {% if active_nav == 'piggy' %}
+                <img src="{% static 'mbank/assets/f929a.svg' %}" alt="">
+              {% else %}
+                <img src="{% static 'mbank/assets/3186b.svg' %}" alt="">
+              {% endif %}
+            </span>
+            <span>Cofrinho</span>
+          </a>
+
+          <a href="{% url 'bank:loan' %}" class="mb-nav-item {% if active_nav == 'loan' %}active{% endif %}">
+            <span class="mb-nav-icon">
+              {% if active_nav == 'loan' %}
+                <img src="{% static 'mbank/assets/0275d.svg' %}" alt="">
+              {% else %}
+                <img src="{% static 'mbank/assets/6b7ea.svg' %}" alt="">
+              {% endif %}
+            </span>
+            <span>Empréstimo</span>
+          </a>
         </nav>
+      </div>
 
-        {# Page Contents #}
-        <div class="container">
-            {% block breadcrumbs_container %}
-                <ol class="breadcrumb">
-                    <li><a href="{% url "home" %}">Home</a></li>
-                    {% block breadcrumbs %}{% endblock %}
-                </ol>
-            {% endblock %}
-            {% for message in messages %}
-                <div class="alert alert-info">
-                    <button type="button" class="close" data-dismiss="alert">&times;</button>
-                    {{ message }}
-                </div>
-            {% endfor %}
-            {% block content %}
-                <h2>{{ title }}</h2>
-                <hr>
-            {% endblock %}
+      <div class="mb-sidebar-footer">
+        <form method="post" action="{% url 'logout' %}" class="mb-logout-form">
+          {% csrf_token %}
+          <button type="submit" class="mb-logout-btn">
+            <span class="mb-nav-icon">
+              <img src="{% static 'mbank/assets/50338.svg' %}" alt="">
+            </span>
+            <span>Sair</span>
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="mb-main">
+      {% if user.is_authenticated %}
+      <header class="mb-header">
+        <div class="mb-header-left">
+          {% if page_kicker %}
+            <span class="mb-kicker">{{ page_kicker }}</span>
+          {% endif %}
+          <h1 class="mb-greeting">Olá, {{ user_display_name }}</h1>
         </div>
+        <div class="mb-avatar" title="{{ user_display_name }}">{{ user_initials }}</div>
+      </header>
+      {% endif %}
 
-        {# Footer #}
-        <br><hr>
-        <div class="container">
-            {% block footer %}
-                <p class="pull-right">
-                    Powered by <a href="https://github.com/nathan-osman/django-bootstrap3-templates">django-bootstrap3-templates</a>
-                </p>
-                <p>
-                    Copyright &copy; {% now "Y" %}
-                </p>
-            {% endblock %}
-        </div>
+      {% if messages %}
+        {% for message in messages %}
+          <div class="mb-auth-error" style="border-color: var(--brand-primary); color: #fff; background: rgba(91,88,200,0.2);">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
 
-        {% block scripts %}
-            <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js" integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ" crossorigin="anonymous"></script>
-        {% endblock %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
 
-        {% bootstrap_javascript %}
-    </body>
+  <div id="mb-toast-stack" class="mb-toast-stack"></div>
+  <script src="{% static 'mbank/js/mbank.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
 </html>
