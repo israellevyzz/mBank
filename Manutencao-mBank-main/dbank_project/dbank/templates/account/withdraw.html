@@ -143,7 +143,7 @@
       </div>
     </div>
 
-    <!-- Modal de Confirmação / Código Gerado -->
+    <!-- Modal de Confirmação / Código ou QR Code Gerado -->
     <div class="mb-modal-backdrop" id="modal-withdraw-result">
       <div class="mb-modal">
         <div class="mb-modal-header">
@@ -151,12 +151,18 @@
           <button type="button" class="mb-modal-close" data-close-modal="modal-withdraw-result">&times;</button>
         </div>
         <p class="mb-page-subtitle" id="withdraw-result-desc">
-          Apresente o código abaixo no caixa Banco24Horas para concluir a retirada.
+          Digite o código abaixo no caixa Banco24Horas para concluir a retirada.
         </p>
-        <div style="background:var(--bg-elevated);border-radius:14px;padding:22px;text-align:center;">
-          <div style="font-size:12px;color:var(--text-subtle);letter-spacing:1.2px;text-transform:uppercase;">CÓDIGO DE RETIRADA</div>
-          <div id="withdraw-code-value" style="font-family:var(--font-mono);font-size:32px;font-weight:700;color:var(--positive-emerald);margin-top:6px;letter-spacing:3px;">--- ---</div>
-          <div id="withdraw-code-amount" style="font-size:14px;color:var(--text-secondary);margin-top:8px;"></div>
+        <div style="background:var(--bg-elevated);border-radius:14px;padding:22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;">
+          <div id="withdraw-result-caption" style="font-size:12px;color:var(--text-subtle);letter-spacing:1.2px;text-transform:uppercase;">CÓDIGO DE RETIRADA</div>
+          <div id="withdraw-qr-wrap" style="display:none;background:var(--bg-input-dark);border:1px solid var(--border-line);border-radius:14px;padding:14px;">
+            <img src="{% static 'mbank/assets/aa3e5.svg' %}" alt="QR Code de Saque" width="148" height="148" style="display:block;">
+          </div>
+          <div id="withdraw-code-value" style="font-family:var(--font-mono);font-size:32px;font-weight:700;color:var(--positive-emerald);letter-spacing:3px;">--- ---</div>
+          <div id="withdraw-code-backup" style="display:none;font-size:13px;color:var(--text-secondary);">
+            Código alternativo: <strong id="withdraw-code-backup-val" style="font-family:var(--font-mono);color:var(--positive-emerald);letter-spacing:1.5px;">--- ---</strong>
+          </div>
+          <div id="withdraw-code-amount" style="font-size:14px;color:var(--text-secondary);"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:10px;">
           <a href="{% url 'bank:transactions_list' %}" class="mb-btn-secondary">Ver extrato</a>
@@ -287,7 +293,18 @@
         } else {
           accountSel.setAttribute('data-available', res.account.available_balance);
         }
+        const isQr = method === 'qr';
+        document.getElementById('withdraw-result-desc').textContent = isQr
+          ? 'Apresente o QR Code abaixo no leitor do caixa Banco24Horas ou Pix Saque para concluir a retirada.'
+          : 'Digite o código abaixo no teclado do caixa Banco24Horas para concluir a retirada.';
+        document.getElementById('withdraw-result-caption').textContent = isQr
+          ? 'QR CODE DE SAQUE DIGITAL'
+          : 'CÓDIGO DE RETIRADA';
+        document.getElementById('withdraw-qr-wrap').style.display = isQr ? 'block' : 'none';
+        document.getElementById('withdraw-code-value').style.display = isQr ? 'none' : 'block';
         document.getElementById('withdraw-code-value').textContent = res.withdrawal_code;
+        document.getElementById('withdraw-code-backup').style.display = isQr ? 'block' : 'none';
+        document.getElementById('withdraw-code-backup-val').textContent = res.withdrawal_code;
         document.getElementById('withdraw-code-amount').textContent =
           'Valor sacado: R$ ' + window.mBank.formatBRL(amount) + ' · Novo saldo disponível: R$ ' + window.mBank.formatBRL(res.account.available_balance);
         window.mBank.openModal('modal-withdraw-result');
